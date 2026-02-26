@@ -10,6 +10,7 @@ interface DayCardProps {
 
 export default function DayCard({ dayLog, isToday, onChange }: DayCardProps) {
   const [adding, setAdding] = useState(false);
+  const [search, setSearch] = useState("");
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -61,6 +62,9 @@ export default function DayCard({ dayLog, isToday, onChange }: DayCardProps) {
 
   const usedExercises = dayLog.exercises.map((e) => e.exercise);
   const availableExercises = EXERCISES.filter((e) => !usedExercises.includes(e));
+  const filteredExercises = availableExercises.filter((e) =>
+    e.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div
@@ -145,21 +149,31 @@ export default function DayCard({ dayLog, isToday, onChange }: DayCardProps) {
       ))}
 
       {adding ? (
-        <div className="mt-2 bg-secondary rounded-lg p-2 max-h-36 overflow-y-auto">
-          {availableExercises.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => addExercise(ex)}
-              className="block w-full text-left text-xs py-1.5 px-2 rounded hover:bg-border transition-colors text-foreground/80"
-            >
-              {ex}
-            </button>
-          ))}
-          {availableExercises.length === 0 && (
-            <p className="text-xs text-muted-foreground p-2">All exercises added</p>
-          )}
+        <div className="mt-2 bg-secondary rounded-lg p-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Übung suchen..."
+            autoFocus
+            className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary mb-2"
+          />
+          <div className="max-h-36 overflow-y-auto">
+            {filteredExercises.map((ex) => (
+              <button
+                key={ex}
+                onClick={() => { addExercise(ex); setSearch(""); }}
+                className="block w-full text-left text-xs py-1.5 px-2 rounded hover:bg-border transition-colors text-foreground/80"
+              >
+                {ex}
+              </button>
+            ))}
+            {filteredExercises.length === 0 && (
+              <p className="text-xs text-muted-foreground p-2">Keine Übung gefunden</p>
+            )}
+          </div>
           <button
-            onClick={() => setAdding(false)}
+            onClick={() => { setAdding(false); setSearch(""); }}
             className="mt-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
           >
             cancel
