@@ -30,6 +30,8 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
     .eq("week_start", weekStart)
     .maybeSingle();
 
+  const isNew = !weekRow;
+
   if (!weekRow) {
     const { data: newWeek } = await supabase
       .from("workout_weeks")
@@ -49,6 +51,46 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
     .select("*")
     .eq("week_id", weekRow.id)
     .order("sort_order");
+
+  // If new week with no exercises, copy structure from most recent previous week
+  if (isNew && (!exercises || exercises.length === 0)) {
+    const { data: prevWeeks } = await supabase
+      .from("workout_weeks")
+      .select("id, week_start")
+      .eq("user_id", userId)
+      .lt("week_start", weekStart)
+      .order("week_start", { ascending: false })
+      .limit(1);
+
+    if (prevWeeks && prevWeeks.length > 0) {
+      const { data: prevExercises } = await supabase
+        .from("workout_exercises")
+        .select("day, exercise, sort_order")
+        .eq("week_id", prevWeeks[0].id)
+        .order("sort_order");
+
+      if (prevExercises && prevExercises.length > 0) {
+        const rows = prevExercises.map((e) => ({
+          week_id: weekRow!.id,
+          user_id: userId,
+          day: e.day,
+          exercise: e.exercise,
+          sets: [{ reps: 0, kg: 0 }],
+          sort_order: e.sort_order,
+        }));
+        await supabase.from("workout_exercises").insert(rows);
+
+        // Build result from copied exercises
+        const days: DayLog[] = FULL_DAYS.map((day) => {
+          const dayExercises: ExerciseLog[] = prevExercises
+            .filter((e) => e.day === day)
+            .map((e) => ({ exercise: e.exercise, sets: [{ reps: 0, kg: 0 }] }));
+          return { day, exercises: dayExercises };
+        });
+        return { weekStart, days };
+      }
+    }
+  }
 
   // Build the WeekLog structure
   const days: DayLog[] = FULL_DAYS.map((day) => {
