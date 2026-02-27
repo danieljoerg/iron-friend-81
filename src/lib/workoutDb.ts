@@ -44,17 +44,108 @@ export function computeTargets(
   const exercise = repRange?.exercise ?? "";
   const increment = COMPOUND_EXERCISES.has(exercise) ? COMPOUND_INCREMENT : ISOLATION_INCREMENT;
 
-  // Check if all sets hit max reps → increase weight
+  // RIR-aware progression:
+  // - If any set had RIR 0 (failure), don't increase → repeat same targets
+  // - If average RIR >= 3, push harder: +2 reps or weight bump
+  // - If all sets hit max reps with RIR >= 1 → increase weight
+  // - Default (no RIR data): standard double progression
+  const hasRirData = prevSets.some((s) => s.rir !== undefined && s.rir !== null);
+  const anyFailure = hasRirData && prevSets.some((s) => s.rir === 0);
+  const avgRir = hasRirData
+    ? prevSets.reduce((sum, s) => sum + (s.rir ?? 2), 0) / prevSets.length
+    : null;
+
   const allMaxed = prevSets.every((s) => s.reps >= max);
 
   return prevSets.map((s) => {
     if (s.reps === 0 && s.kg === 0) return { reps: min, kg: 0 };
+
+    // Hit failure last time → repeat same target (recovery)
+    if (anyFailure) {
+      return { reps: s.reps, kg: s.kg };
+    }
+
+    // All sets at max reps → weight bump
     if (allMaxed) {
       return { reps: min, kg: s.kg + increment };
     }
-    // Otherwise: try +1 rep, capped at max
+
+    // Lots of reserve (RIR >= 3) → push +2 reps instead of +1
+    if (avgRir !== null && avgRir >= 3) {
+      return { reps: Math.min(s.reps + 2, max), kg: s.kg };
+    }
+
+    // Standard: +1 rep
     return { reps: Math.min(s.reps + 1, max), kg: s.kg };
   });
+}
+
+// Detect stagnation: returns number of consecutive weeks with no volume increase
+export async function detectStagnation(
+  exercise: string,
+  userId: string
+): Promise<number> {
+  const { data: weeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId)
+    .order("week_start", { ascending: false })
+    .limit(5);
+
+  if (!weeks || weeks.length < 2) return 0;
+
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("week_id, sets")
+    .eq("user_id", userId)
+    .eq("exercise", exercise)
+    .in("week_id", weeks.map((w) => w.id));
+
+  if (!exercises) return 0;
+
+  const volumes = weeks.map((w) => {
+    const exs = exercises.filter((e) => e.week_id === w.id);
+    let vol = 0;
+    exs.forEach((e) => {
+      ((e.sets as any[]) || []).forEach((s: any) => {
+        vol += (s.reps || 0) * (s.kg || 0);
+      });
+    });
+    return vol;
+  });
+
+  // Count consecutive weeks from most recent where volume didn't increase
+  let stagnant = 0;
+  for (let i = 0; i < volumes.length - 1; i++) {
+    if (volumes[i] <= volumes[i + 1] && volumes[i] > 0) {
+      stagnant++;
+    } else {
+      break;
+    }
+  }
+  return stagnant;
+}
+
+// Suggest deload: returns true if user has been training 4+ consecutive weeks
+export async function shouldDeload(userId: string): Promise<boolean> {
+  const { data: weeks } = await supabase
+    .from("workout_weeks")
+    .select("week_start")
+    .eq("user_id", userId)
+    .order("week_start", { ascending: false })
+    .limit(6);
+
+  if (!weeks || weeks.length < 4) return false;
+
+  // Check if the last 4 weeks are consecutive
+  for (let i = 0; i < 3; i++) {
+    const d1 = new Date(weeks[i].week_start);
+    const d2 = new Date(weeks[i + 1].week_start);
+    const diffDays = (d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24);
+    if (Math.abs(diffDays - 7) > 1) return false;
+  }
+
+  return weeks.length >= 4;
 }
 
 export async function getPreviousWeekData(weekStart: string, userId: string): Promise<Record<string, ExerciseLog[]>> {

@@ -139,6 +139,7 @@ export const FULL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"
 export type WorkoutSet = {
   reps: number;
   kg: number;
+  rir?: number; // Reps in Reserve (0-5), undefined = not tracked
 };
 
 export type ExerciseLog = {
