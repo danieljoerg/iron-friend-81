@@ -204,7 +204,7 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           value={set.reps || ""}
                           placeholder={target ? `${target.reps}` : "reps"}
                           onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
-                          className={`w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary ${getRepColor(set.reps, ex.exercise)}`}
+                          className={`w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary ${getRepColor(set.reps, ex.exercise)}`}
                         />
                         <span className="text-muted-foreground text-[10px]">×</span>
                         <input
@@ -214,9 +214,19 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           value={set.kg || ""}
                           placeholder={target ? `${target.kg}` : "kg"}
                           onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
-                          className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          className="w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                         <span className="text-muted-foreground text-[10px] font-mono">kg</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={5}
+                          value={set.rir !== undefined && set.rir !== null ? set.rir : ""}
+                          placeholder="RIR"
+                          onChange={(e) => updateSet(exIdx, setIdx, "rir", Number(e.target.value))}
+                          className="w-12 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          title="Reps in Reserve (wie viele Wiederholungen noch möglich gewesen wären)"
+                        />
                         {ex.sets.length > 1 && (
                           <button
                             onClick={() => removeSet(exIdx, setIdx)}
