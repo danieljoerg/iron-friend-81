@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { FULL_DAYS, type WeekLog, type DayLog, type ExerciseLog } from "./workoutData";
+import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, type WeekLog, type DayLog, type ExerciseLog, type MuscleGroup } from "./workoutData";
 
 export async function getOrCreateWeekDb(weekStart: string, userId: string): Promise<WeekLog> {
   // Get or create week record
@@ -107,6 +107,82 @@ export async function getExerciseProgressDb(
     .select("week_id, sets")
     .eq("user_id", userId)
     .eq("exercise", exercise);
+
+  if (!exercises) return [];
+
+  return weeks
+    .map((w) => {
+      const weekExercises = exercises.filter((e) => e.week_id === w.id);
+      let totalVolume = 0;
+      let maxWeight = 0;
+      weekExercises.forEach((e) => {
+        const sets = (e.sets as any[]) || [];
+        sets.forEach((s: any) => {
+          totalVolume += (s.reps || 0) * (s.kg || 0);
+          if (s.kg > maxWeight) maxWeight = s.kg;
+        });
+      });
+      return { week: w.week_start, volume: totalVolume, maxWeight };
+    })
+    .filter((d) => d.volume > 0);
+}
+
+export async function getMuscleGroupProgressDb(
+  muscleGroup: MuscleGroup,
+  userId: string
+): Promise<{ week: string; volume: number; maxWeight: number }[]> {
+  const exercisesInGroup = Object.entries(EXERCISE_MUSCLE_MAP)
+    .filter(([_, mg]) => mg === muscleGroup)
+    .map(([ex]) => ex);
+
+  const { data: weeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId)
+    .order("week_start");
+
+  if (!weeks || weeks.length === 0) return [];
+
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("week_id, sets")
+    .eq("user_id", userId)
+    .in("exercise", exercisesInGroup);
+
+  if (!exercises) return [];
+
+  return weeks
+    .map((w) => {
+      const weekExercises = exercises.filter((e) => e.week_id === w.id);
+      let totalVolume = 0;
+      let maxWeight = 0;
+      weekExercises.forEach((e) => {
+        const sets = (e.sets as any[]) || [];
+        sets.forEach((s: any) => {
+          totalVolume += (s.reps || 0) * (s.kg || 0);
+          if (s.kg > maxWeight) maxWeight = s.kg;
+        });
+      });
+      return { week: w.week_start, volume: totalVolume, maxWeight };
+    })
+    .filter((d) => d.volume > 0);
+}
+
+export async function getOverallProgressDb(
+  userId: string
+): Promise<{ week: string; volume: number; maxWeight: number }[]> {
+  const { data: weeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId)
+    .order("week_start");
+
+  if (!weeks || weeks.length === 0) return [];
+
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("week_id, sets")
+    .eq("user_id", userId);
 
   if (!exercises) return [];
 
