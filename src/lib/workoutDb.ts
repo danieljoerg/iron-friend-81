@@ -19,7 +19,71 @@ export async function setRepRangeDb(userId: string, exercise: string, minReps: n
     .from("exercise_rep_ranges")
     .upsert({ user_id: userId, exercise, min_reps: minReps, max_reps: maxReps }, { onConflict: "user_id,exercise" });
 }
-import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, type WeekLog, type DayLog, type ExerciseLog, type MuscleGroup } from "./workoutData";
+import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, type WeekLog, type DayLog, type ExerciseLog, type WorkoutSet, type MuscleGroup } from "./workoutData";
+
+// Double Progression: increase reps first, then weight
+const COMPOUND_INCREMENT = 2.5;
+const ISOLATION_INCREMENT = 1;
+const COMPOUND_EXERCISES = new Set([
+  "Flat Barbell Bench Press", "Incline Barbell Bench Press", "Decline Barbell Bench Press",
+  "Barbell Row", "Pendlay Row", "T-Bar Row",
+  "Overhead Press (Barbell)", "Back Squat", "Front Squat", "Hack Squat", "Leg Press",
+  "Conventional Deadlift", "Sumo Deadlift", "Trap Bar Deadlift",
+  "Hip Thrust (Barbell)", "Close Grip Bench Press",
+]);
+
+export type ExerciseTarget = { reps: number; kg: number };
+
+export function computeTargets(
+  prevSets: WorkoutSet[],
+  repRange: RepRange | undefined
+): ExerciseTarget[] {
+  if (!prevSets || prevSets.length === 0) return [];
+  const min = repRange?.min_reps ?? 8;
+  const max = repRange?.max_reps ?? 12;
+  const exercise = repRange?.exercise ?? "";
+  const increment = COMPOUND_EXERCISES.has(exercise) ? COMPOUND_INCREMENT : ISOLATION_INCREMENT;
+
+  // Check if all sets hit max reps → increase weight
+  const allMaxed = prevSets.every((s) => s.reps >= max);
+
+  return prevSets.map((s) => {
+    if (s.reps === 0 && s.kg === 0) return { reps: min, kg: 0 };
+    if (allMaxed) {
+      return { reps: min, kg: s.kg + increment };
+    }
+    // Otherwise: try +1 rep, capped at max
+    return { reps: Math.min(s.reps + 1, max), kg: s.kg };
+  });
+}
+
+export async function getPreviousWeekData(weekStart: string, userId: string): Promise<Record<string, ExerciseLog[]>> {
+  const { data: prevWeeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId)
+    .lt("week_start", weekStart)
+    .order("week_start", { ascending: false })
+    .limit(1);
+
+  if (!prevWeeks || prevWeeks.length === 0) return {};
+
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("day, exercise, sets, sort_order")
+    .eq("week_id", prevWeeks[0].id)
+    .order("sort_order");
+
+  if (!exercises) return {};
+
+  const result: Record<string, ExerciseLog[]> = {};
+  for (const day of FULL_DAYS) {
+    result[day] = exercises
+      .filter((e) => e.day === day)
+      .map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
+  }
+  return result;
+}
 
 export async function getOrCreateWeekDb(weekStart: string, userId: string): Promise<WeekLog> {
   // Get or create week record

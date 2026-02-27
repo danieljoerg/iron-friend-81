@@ -1,7 +1,7 @@
-import { Plus, Trash2, Settings2 } from "lucide-react";
+import { Plus, Trash2, Settings2, Target } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState } from "react";
-import type { RepRange } from "@/lib/workoutDb";
+import { computeTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
 
 interface DayCardProps {
   dayLog: DayLog;
@@ -10,9 +10,10 @@ interface DayCardProps {
   onChange: (updated: DayLog) => void;
   repRanges?: Record<string, RepRange>;
   onRepRangeChange?: (exercise: string, min: number, max: number) => void;
+  prevDayExercises?: ExerciseLog[];
 }
 
-export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange }: DayCardProps) {
+export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, prevDayExercises }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
   dayDate.setDate(dayDate.getDate() + dayIndex);
@@ -177,42 +178,59 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
               </div>
             )}
 
-            <div className="space-y-1">
-              {ex.sets.map((set, setIdx) => (
-                <div key={setIdx} className="flex items-center gap-1.5">
-                  <span className="font-mono text-[10px] text-muted-foreground w-4">
-                    {setIdx + 1}
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={set.reps || ""}
-                    placeholder="reps"
-                    onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
-                    className={`w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary ${getRepColor(set.reps, ex.exercise)}`}
-                  />
-                  <span className="text-muted-foreground text-[10px]">×</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    value={set.kg || ""}
-                    placeholder="kg"
-                    onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
-                    className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <span className="text-muted-foreground text-[10px] font-mono">kg</span>
-                  {ex.sets.length > 1 && (
-                    <button
-                      onClick={() => removeSet(exIdx, setIdx)}
-                      className="text-muted-foreground hover:text-destructive transition-colors ml-auto"
-                    >
-                      <Trash2 className="w-2.5 h-2.5" />
-                    </button>
+            {(() => {
+              const prevEx = prevDayExercises?.find((p) => p.exercise === ex.exercise);
+              const targets = prevEx ? computeTargets(prevEx.sets, repRanges?.[ex.exercise] ? { ...repRanges[ex.exercise] } : undefined) : [];
+              return (
+                <div className="space-y-1">
+                  {targets.length > 0 && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <Target className="w-2.5 h-2.5 text-primary/60" />
+                      <span className="text-[9px] font-mono text-primary/60">
+                        Ziel: {targets.map((t) => `${t.reps}×${t.kg}kg`).join(", ")}
+                      </span>
+                    </div>
                   )}
+                  {ex.sets.map((set, setIdx) => {
+                    const target = targets[setIdx];
+                    return (
+                      <div key={setIdx} className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] text-muted-foreground w-4">
+                          {setIdx + 1}
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={set.reps || ""}
+                          placeholder={target ? `${target.reps}` : "reps"}
+                          onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
+                          className={`w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary ${getRepColor(set.reps, ex.exercise)}`}
+                        />
+                        <span className="text-muted-foreground text-[10px]">×</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          value={set.kg || ""}
+                          placeholder={target ? `${target.kg}` : "kg"}
+                          onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
+                          className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <span className="text-muted-foreground text-[10px] font-mono">kg</span>
+                        {ex.sets.length > 1 && (
+                          <button
+                            onClick={() => removeSet(exIdx, setIdx)}
+                            className="text-muted-foreground hover:text-destructive transition-colors ml-auto"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
             <button
               onClick={() => addSet(exIdx)}
               className="mt-1 text-[10px] font-mono text-primary hover:text-primary/80 transition-colors"
