@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      exercise_rep_ranges: {
+        Row: {
+          created_at: string
+          exercise: string
+          id: string
+          max_reps: number
+          min_reps: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise: string
+          id?: string
+          max_reps?: number
+          min_reps?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise?: string
+          id?: string
+          max_reps?: number
+          min_reps?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_exercises: {
         Row: {
           created_at: string

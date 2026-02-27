@@ -4,7 +4,7 @@ import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
 import { getWeekStart, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
-import { getOrCreateWeekDb, saveWeekDb } from "@/lib/workoutDb";
+import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, type RepRange } from "@/lib/workoutDb";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
@@ -15,16 +15,26 @@ const Index = () => {
     days: FULL_DAYS.map((day) => ({ day, exercises: [] })),
   });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [repRanges, setRepRanges] = useState<Record<string, RepRange>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    getOrCreateWeekDb(weekStart, user.id).then((w) => {
+    Promise.all([
+      getOrCreateWeekDb(weekStart, user.id),
+      getRepRangesDb(user.id),
+    ]).then(([w, rr]) => {
       setWeek(w);
+      setRepRanges(rr);
       setLoading(false);
     });
   }, [weekStart, user]);
+
+  const handleRepRangeChange = (exercise: string, min: number, max: number) => {
+    setRepRanges((prev) => ({ ...prev, [exercise]: { exercise, min_reps: min, max_reps: max } }));
+    if (user) setRepRangeDb(user.id, exercise, min, max);
+  };
 
   const navigateWeek = (direction: number) => {
     const d = new Date(weekStart + "T00:00:00");
@@ -99,6 +109,8 @@ const Index = () => {
                 dayLog={dayLog}
                 isToday={isCurrentWeek && dayLog.day === todayName}
                 onChange={(updated) => handleDayChange(idx, updated)}
+                repRanges={repRanges}
+                onRepRangeChange={handleRepRangeChange}
               />
             ))}
           </div>

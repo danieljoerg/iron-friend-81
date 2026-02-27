@@ -1,16 +1,20 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Settings2 } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState } from "react";
+import type { RepRange } from "@/lib/workoutDb";
 
 interface DayCardProps {
   dayLog: DayLog;
   isToday: boolean;
   onChange: (updated: DayLog) => void;
+  repRanges?: Record<string, RepRange>;
+  onRepRangeChange?: (exercise: string, min: number, max: number) => void;
 }
 
-export default function DayCard({ dayLog, isToday, onChange }: DayCardProps) {
+export default function DayCard({ dayLog, isToday, onChange, repRanges, onRepRangeChange }: DayCardProps) {
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
+  const [editingRange, setEditingRange] = useState<string | null>(null);
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -66,6 +70,14 @@ export default function DayCard({ dayLog, isToday, onChange }: DayCardProps) {
     e.toLowerCase().includes(search.toLowerCase())
   );
 
+  const getRepColor = (reps: number, exercise: string) => {
+    const range = repRanges?.[exercise];
+    if (!range || reps === 0) return "";
+    if (reps < range.min_reps) return "ring-1 ring-yellow-500/50";
+    if (reps > range.max_reps) return "ring-1 ring-blue-500/50";
+    return "ring-1 ring-primary/50";
+  };
+
   return (
     <div
       className={`rounded-xl border p-4 transition-all ${
@@ -92,61 +104,118 @@ export default function DayCard({ dayLog, isToday, onChange }: DayCardProps) {
         )}
       </div>
 
-      {dayLog.exercises.map((ex, exIdx) => (
-        <div key={exIdx} className="mb-3 last:mb-0">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-foreground/80">{ex.exercise}</span>
-            <button
-              onClick={() => removeExercise(exIdx)}
-              className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="space-y-1">
-            {ex.sets.map((set, setIdx) => (
-              <div key={setIdx} className="flex items-center gap-1.5">
-                <span className="font-mono text-[10px] text-muted-foreground w-4">
-                  {setIdx + 1}
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={set.reps || ""}
-                  placeholder="reps"
-                  onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
-                  className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-muted-foreground text-[10px]">×</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={set.kg || ""}
-                  placeholder="kg"
-                  onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
-                  className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-muted-foreground text-[10px] font-mono">kg</span>
-                {ex.sets.length > 1 && (
-                  <button
-                    onClick={() => removeSet(exIdx, setIdx)}
-                    className="text-muted-foreground hover:text-destructive transition-colors ml-auto"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
+      {dayLog.exercises.map((ex, exIdx) => {
+        const range = repRanges?.[ex.exercise];
+        return (
+          <div key={exIdx} className="mb-3 last:mb-0">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-medium text-foreground/80 truncate">{ex.exercise}</span>
+                {range && (
+                  <span className="text-[9px] font-mono text-muted-foreground shrink-0">
+                    {range.min_reps}–{range.max_reps}r
+                  </span>
                 )}
               </div>
-            ))}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditingRange(editingRange === ex.exercise ? null : ex.exercise)}
+                  className="text-muted-foreground hover:text-primary transition-colors p-0.5"
+                  title="Set rep range"
+                >
+                  <Settings2 className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => removeExercise(exIdx)}
+                  className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {editingRange === ex.exercise && (
+              <div className="flex items-center gap-1.5 mb-2 bg-secondary rounded-lg p-2">
+                <span className="text-[10px] font-mono text-muted-foreground">Reps:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={range?.min_reps ?? 8}
+                  className="w-12 bg-background border border-border rounded px-1.5 py-0.5 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  onBlur={(e) => {
+                    const min = Number(e.target.value) || 8;
+                    const max = range?.max_reps ?? 12;
+                    onRepRangeChange?.(ex.exercise, min, Math.max(min, max));
+                  }}
+                />
+                <span className="text-[10px] text-muted-foreground">–</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={range?.max_reps ?? 12}
+                  className="w-12 bg-background border border-border rounded px-1.5 py-0.5 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  onBlur={(e) => {
+                    const max = Number(e.target.value) || 12;
+                    const min = range?.min_reps ?? 8;
+                    onRepRangeChange?.(ex.exercise, Math.min(min, max), max);
+                  }}
+                />
+                <button
+                  onClick={() => setEditingRange(null)}
+                  className="ml-auto text-[10px] font-mono text-primary"
+                >
+                  done
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              {ex.sets.map((set, setIdx) => (
+                <div key={setIdx} className="flex items-center gap-1.5">
+                  <span className="font-mono text-[10px] text-muted-foreground w-4">
+                    {setIdx + 1}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={set.reps || ""}
+                    placeholder="reps"
+                    onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
+                    className={`w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary ${getRepColor(set.reps, ex.exercise)}`}
+                  />
+                  <span className="text-muted-foreground text-[10px]">×</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={set.kg || ""}
+                    placeholder="kg"
+                    onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
+                    className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <span className="text-muted-foreground text-[10px] font-mono">kg</span>
+                  {ex.sets.length > 1 && (
+                    <button
+                      onClick={() => removeSet(exIdx, setIdx)}
+                      className="text-muted-foreground hover:text-destructive transition-colors ml-auto"
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => addSet(exIdx)}
+              className="mt-1 text-[10px] font-mono text-primary hover:text-primary/80 transition-colors"
+            >
+              + set
+            </button>
           </div>
-          <button
-            onClick={() => addSet(exIdx)}
-            className="mt-1 text-[10px] font-mono text-primary hover:text-primary/80 transition-colors"
-          >
-            + set
-          </button>
-        </div>
-      ))}
+        );
+      })}
 
       {adding ? (
         <div className="mt-2 bg-secondary rounded-lg p-2">
