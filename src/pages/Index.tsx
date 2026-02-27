@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Dumbbell, LogOut } from "lucide-react";
+import { getWeekStart as getWeekStartForDate } from "@/lib/workoutData";
 import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
@@ -82,6 +83,7 @@ const Index = () => {
               onPrev={() => navigateWeek(-1)}
               onNext={() => navigateWeek(1)}
               onToday={goToToday}
+              onDateSelect={(date) => setWeekStart(getWeekStartForDate(date))}
             />
             <button
               onClick={signOut}
