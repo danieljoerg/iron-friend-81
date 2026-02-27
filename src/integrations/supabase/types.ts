@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      workout_exercises: {
+        Row: {
+          created_at: string
+          day: string
+          exercise: string
+          id: string
+          sets: Json
+          sort_order: number
+          updated_at: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          exercise: string
+          id?: string
+          sets?: Json
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          exercise?: string
+          id?: string
+          sets?: Json
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_exercises_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "workout_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_weeks: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
