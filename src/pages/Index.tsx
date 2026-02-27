@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Dumbbell, LogOut } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getWeekStart as getWeekStartForDate } from "@/lib/workoutData";
 import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
@@ -99,30 +100,39 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="mb-6">
-          <ProgressChart key={refreshKey} userId={user?.id} />
-        </div>
+        <Tabs defaultValue="tracking" className="mt-2">
+          <TabsList className="w-full mb-4">
+            <TabsTrigger value="tracking" className="flex-1 text-xs font-mono">Tracking</TabsTrigger>
+            <TabsTrigger value="progress" className="flex-1 text-xs font-mono">Progress</TabsTrigger>
+          </TabsList>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {week.days.map((dayLog, idx) => (
-              <DayCard
-                key={dayLog.day}
-                dayLog={dayLog}
-                isToday={isCurrentWeek && dayLog.day === todayName}
-                weekStart={weekStart}
-                onChange={(updated) => handleDayChange(idx, updated)}
-                repRanges={repRanges}
-                onRepRangeChange={handleRepRangeChange}
-                prevDayExercises={prevWeekData[dayLog.day] || []}
-              />
-            ))}
-          </div>
-        )}
+          <TabsContent value="tracking">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {week.days.map((dayLog, idx) => (
+                  <DayCard
+                    key={dayLog.day}
+                    dayLog={dayLog}
+                    isToday={isCurrentWeek && dayLog.day === todayName}
+                    weekStart={weekStart}
+                    onChange={(updated) => handleDayChange(idx, updated)}
+                    repRanges={repRanges}
+                    onRepRangeChange={handleRepRangeChange}
+                    prevDayExercises={prevWeekData[dayLog.day] || []}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="progress">
+            <ProgressChart key={refreshKey} userId={user?.id} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
