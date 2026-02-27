@@ -108,6 +108,7 @@ const Index = () => {
                 key={dayLog.day}
                 dayLog={dayLog}
                 isToday={isCurrentWeek && dayLog.day === todayName}
+                weekStart={weekStart}
                 onChange={(updated) => handleDayChange(idx, updated)}
                 repRanges={repRanges}
                 onRepRangeChange={handleRepRangeChange}
