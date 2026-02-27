@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { Dumbbell, LogOut } from "lucide-react";
+import { Dumbbell, LogOut, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getWeekStart as getWeekStartForDate } from "@/lib/workoutData";
 import WeekSelector from "@/components/WeekSelector";
@@ -12,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
   const [week, setWeek] = useState<WeekLog>({
     weekStart: getWeekStart(),
@@ -90,6 +92,13 @@ const Index = () => {
               onToday={goToToday}
               onDateSelect={(date) => setWeekStart(getWeekStartForDate(date))}
             />
+            <button
+              onClick={() => navigate("/profile")}
+              className="p-2 rounded-lg bg-secondary hover:bg-border transition-colors text-muted-foreground hover:text-foreground"
+              title="Profil"
+            >
+              <User className="w-4 h-4" />
+            </button>
             <button
               onClick={signOut}
               className="p-2 rounded-lg bg-secondary hover:bg-border transition-colors text-muted-foreground hover:text-foreground"

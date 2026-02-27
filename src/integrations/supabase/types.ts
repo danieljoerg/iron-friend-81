@@ -44,6 +44,45 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          age: number | null
+          body_weight: number | null
+          created_at: string
+          display_name: string | null
+          gender: string | null
+          height: number | null
+          id: string
+          training_experience: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age?: number | null
+          body_weight?: number | null
+          created_at?: string
+          display_name?: string | null
+          gender?: string | null
+          height?: number | null
+          id?: string
+          training_experience?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age?: number | null
+          body_weight?: number | null
+          created_at?: string
+          display_name?: string | null
+          gender?: string | null
+          height?: number | null
+          id?: string
+          training_experience?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_exercises: {
         Row: {
           created_at: string
