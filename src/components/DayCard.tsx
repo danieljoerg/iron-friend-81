@@ -6,12 +6,17 @@ import type { RepRange } from "@/lib/workoutDb";
 interface DayCardProps {
   dayLog: DayLog;
   isToday: boolean;
+  weekStart: string;
   onChange: (updated: DayLog) => void;
   repRanges?: Record<string, RepRange>;
   onRepRangeChange?: (exercise: string, min: number, max: number) => void;
 }
 
-export default function DayCard({ dayLog, isToday, onChange, repRanges, onRepRangeChange }: DayCardProps) {
+export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange }: DayCardProps) {
+  const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
+  const dayDate = new Date(weekStart + "T00:00:00");
+  dayDate.setDate(dayDate.getDate() + dayIndex);
+  const dateStr = dayDate.toLocaleDateString("de-DE", { day: "numeric", month: "short" });
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
   const [editingRange, setEditingRange] = useState<string | null>(null);
@@ -91,6 +96,7 @@ export default function DayCard({ dayLog, isToday, onChange, repRanges, onRepRan
           <h3 className="font-heading font-semibold text-sm">
             {dayLog.day}
           </h3>
+          <span className="text-[10px] font-mono text-muted-foreground">{dateStr}</span>
           {isToday && (
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
               Today
