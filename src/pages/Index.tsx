@@ -3,7 +3,7 @@ import { Dumbbell, LogOut } from "lucide-react";
 import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
-import { getWeekStart, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
+import { getWeekStart, formatDateString, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
 import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, type RepRange } from "@/lib/workoutDb";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -39,7 +39,7 @@ const Index = () => {
   const navigateWeek = (direction: number) => {
     const d = new Date(weekStart + "T00:00:00");
     d.setDate(d.getDate() + direction * 7);
-    setWeekStart(d.toISOString().split("T")[0]);
+    setWeekStart(formatDateString(d));
   };
 
   const goToToday = () => setWeekStart(getWeekStart());
