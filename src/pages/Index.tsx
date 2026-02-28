@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Dumbbell, LogOut, User } from "lucide-react";
+import { Dumbbell, LogOut, User, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,45 +81,34 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Dumbbell className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="font-heading font-bold text-xl">
-                {displayName ? `Hey, ${displayName}` : "Lift Log"}
-              </h1>
-              <p className="text-muted-foreground text-xs font-mono">Progressive overload tracker</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <WeekSelector
-              weekStart={weekStart}
-              onPrev={() => navigateWeek(-1)}
-              onNext={() => navigateWeek(1)}
-              onToday={goToToday}
-              onDateSelect={(date) => setWeekStart(getWeekStartForDate(date))}
-            />
-            <button
-              onClick={() => navigate("/profile")}
-              className="p-2 rounded-lg bg-secondary hover:bg-border transition-colors text-muted-foreground hover:text-foreground"
-              title="Profil"
-            >
-              <User className="w-4 h-4" />
-            </button>
-            <button
-              onClick={signOut}
-              className="p-2 rounded-lg bg-secondary hover:bg-border transition-colors text-muted-foreground hover:text-foreground"
-              title="Ausloggen"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* Top bar: greeting + settings */}
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="font-heading font-bold text-lg">
+            {displayName ? `Hey, ${displayName} 👋` : "Lift Log"}
+          </h1>
+          <button
+            onClick={() => navigate("/profile")}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+            title="Profil & Einstellungen"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-muted-foreground text-xs font-mono mb-5">Progressive overload tracker</p>
+
+        {/* Week navigation */}
+        <div className="flex items-center justify-center mb-5">
+          <WeekSelector
+            weekStart={weekStart}
+            onPrev={() => navigateWeek(-1)}
+            onNext={() => navigateWeek(1)}
+            onToday={goToToday}
+            onDateSelect={(date) => setWeekStart(getWeekStartForDate(date))}
+          />
         </div>
 
-        <Tabs defaultValue="tracking" className="mt-2">
+        <Tabs defaultValue="tracking" className="mt-0">
           <TabsList className="w-full mb-4">
             <TabsTrigger value="tracking" className="flex-1 text-xs font-mono">Tracking</TabsTrigger>
             <TabsTrigger value="progress" className="flex-1 text-xs font-mono">Progress</TabsTrigger>
