@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Dumbbell, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
 import { getWeekStart as getWeekStartForDate } from "@/lib/workoutData";
 import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
@@ -15,6 +16,7 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [week, setWeek] = useState<WeekLog>({
     weekStart: getWeekStart(),
     days: FULL_DAYS.map((day) => ({ day, exercises: [] })),
@@ -23,6 +25,12 @@ const Index = () => {
   const [repRanges, setRepRanges] = useState<Record<string, RepRange>>({});
   const [prevWeekData, setPrevWeekData] = useState<Record<string, ExerciseLog[]>>({});
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => { if (data?.display_name) setDisplayName(data.display_name); });
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -80,7 +88,9 @@ const Index = () => {
               <Dumbbell className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-xl">Lift Log</h1>
+              <h1 className="font-heading font-bold text-xl">
+                {displayName ? `Hey, ${displayName}` : "Lift Log"}
+              </h1>
               <p className="text-muted-foreground text-xs font-mono">Progressive overload tracker</p>
             </div>
           </div>
