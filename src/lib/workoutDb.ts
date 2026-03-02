@@ -1,15 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type RepRange = { exercise: string; min_reps: number; max_reps: number };
+export type RepRange = { exercise: string; min_reps: number; max_reps: number; youtube_url?: string };
 
 export async function getRepRangesDb(userId: string): Promise<Record<string, RepRange>> {
   const { data } = await supabase
     .from("exercise_rep_ranges")
-    .select("exercise, min_reps, max_reps")
+    .select("*")
     .eq("user_id", userId);
   const map: Record<string, RepRange> = {};
   (data || []).forEach((r: any) => {
-    map[r.exercise] = { exercise: r.exercise, min_reps: r.min_reps, max_reps: r.max_reps };
+    map[r.exercise] = { exercise: r.exercise, min_reps: r.min_reps, max_reps: r.max_reps, youtube_url: r.youtube_url || undefined };
   });
   return map;
 }
@@ -17,7 +17,13 @@ export async function getRepRangesDb(userId: string): Promise<Record<string, Rep
 export async function setRepRangeDb(userId: string, exercise: string, minReps: number, maxReps: number): Promise<void> {
   await supabase
     .from("exercise_rep_ranges")
-    .upsert({ user_id: userId, exercise, min_reps: minReps, max_reps: maxReps }, { onConflict: "user_id,exercise" });
+    .upsert({ user_id: userId, exercise, min_reps: minReps, max_reps: maxReps } as any, { onConflict: "user_id,exercise" });
+}
+
+export async function setYoutubeUrlDb(userId: string, exercise: string, youtubeUrl: string | null): Promise<void> {
+  await supabase
+    .from("exercise_rep_ranges")
+    .upsert({ user_id: userId, exercise, youtube_url: youtubeUrl } as any, { onConflict: "user_id,exercise" });
 }
 import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, type WeekLog, type DayLog, type ExerciseLog, type WorkoutSet, type MuscleGroup } from "./workoutData";
 

@@ -8,7 +8,7 @@ import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
 import { getWeekStart, formatDateString, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
-import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, getPreviousWeekData, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
 import type { ExerciseLog } from "@/lib/workoutData";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -51,6 +51,14 @@ const Index = () => {
   const handleRepRangeChange = (exercise: string, min: number, max: number) => {
     setRepRanges((prev) => ({ ...prev, [exercise]: { exercise, min_reps: min, max_reps: max } }));
     if (user) setRepRangeDb(user.id, exercise, min, max);
+  };
+
+  const handleYoutubeUrlChange = (exercise: string, url: string | null) => {
+    setRepRanges((prev) => ({
+      ...prev,
+      [exercise]: { ...prev[exercise], exercise, min_reps: prev[exercise]?.min_reps ?? 8, max_reps: prev[exercise]?.max_reps ?? 12, youtube_url: url || undefined },
+    }));
+    if (user) setYoutubeUrlDb(user.id, exercise, url);
   };
 
   const navigateWeek = (direction: number) => {
@@ -155,6 +163,7 @@ const Index = () => {
                     onChange={(updated) => handleDayChange(idx, updated)}
                     repRanges={repRanges}
                     onRepRangeChange={handleRepRangeChange}
+                    onYoutubeUrlChange={handleYoutubeUrlChange}
                     prevDayExercises={prevWeekData[dayLog.day] || []}
                     expanded={expandedDay === idx}
                     onToggleExpanded={() => setExpandedDay(expandedDay === idx ? null : idx)}

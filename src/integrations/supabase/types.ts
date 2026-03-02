@@ -23,6 +23,7 @@ export type Database = {
           min_reps: number
           updated_at: string
           user_id: string
+          youtube_url: string | null
         }
         Insert: {
           created_at?: string
@@ -32,6 +33,7 @@ export type Database = {
           min_reps?: number
           updated_at?: string
           user_id: string
+          youtube_url?: string | null
         }
         Update: {
           created_at?: string
@@ -41,6 +43,7 @@ export type Database = {
           min_reps?: number
           updated_at?: string
           user_id?: string
+          youtube_url?: string | null
         }
         Relationships: []
       }
