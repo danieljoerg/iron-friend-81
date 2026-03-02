@@ -140,6 +140,7 @@ export type WorkoutSet = {
   reps: number;
   kg: number;
   rir?: number; // Reps in Reserve (0-5), undefined = not tracked
+  done?: boolean; // Whether this set has been completed/submitted
 };
 
 export type ExerciseLog = {
