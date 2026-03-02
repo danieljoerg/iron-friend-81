@@ -11,9 +11,11 @@ interface DayCardProps {
   repRanges?: Record<string, RepRange>;
   onRepRangeChange?: (exercise: string, min: number, max: number) => void;
   prevDayExercises?: ExerciseLog[];
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
-export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, prevDayExercises }: DayCardProps) {
+export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, prevDayExercises, expanded, onToggleExpanded }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
   dayDate.setDate(dayDate.getDate() + dayIndex);
@@ -21,7 +23,6 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
   const [editingRange, setEditingRange] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(isToday);
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -121,7 +122,7 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
       }`}
     >
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => onToggleExpanded()}
         className="flex items-center justify-between w-full mb-0"
       >
         <div className="flex items-center gap-2">
