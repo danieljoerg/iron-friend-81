@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState } from "react";
 import { computeTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
@@ -43,10 +43,18 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
     });
   };
 
-  const updateSet = (exIdx: number, setIdx: number, field: keyof WorkoutSet, value: number) => {
+  const updateSet = (exIdx: number, setIdx: number, field: keyof WorkoutSet, value: number | boolean) => {
     const exercises = [...dayLog.exercises];
     const sets = [...exercises[exIdx].sets];
     sets[setIdx] = { ...sets[setIdx], [field]: value };
+    exercises[exIdx] = { ...exercises[exIdx], sets };
+    onChange({ ...dayLog, exercises });
+  };
+
+  const toggleSetDone = (exIdx: number, setIdx: number) => {
+    const exercises = [...dayLog.exercises];
+    const sets = [...exercises[exIdx].sets];
+    sets[setIdx] = { ...sets[setIdx], done: !sets[setIdx].done };
     exercises[exIdx] = { ...exercises[exIdx], sets };
     onChange({ ...dayLog, exercises });
   };
@@ -194,7 +202,7 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                   {ex.sets.map((set, setIdx) => {
                     const target = targets[setIdx];
                     return (
-                      <div key={setIdx} className="flex items-center gap-1.5">
+                    <div key={setIdx} className={`flex items-center gap-1.5 ${set.done ? 'opacity-50' : ''}`}>
                         <span className="font-mono text-[10px] text-muted-foreground w-4">
                           {setIdx + 1}
                         </span>
@@ -204,7 +212,8 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           value={set.reps || ""}
                           placeholder={target ? `${target.reps}` : "reps"}
                           onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
-                          className={`w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary ${getRepColor(set.reps, ex.exercise)}`}
+                          disabled={set.done}
+                          className={`w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed ${getRepColor(set.reps, ex.exercise)}`}
                         />
                         <span className="text-muted-foreground text-[10px]">×</span>
                         <input
@@ -214,7 +223,8 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           value={set.kg || ""}
                           placeholder={target ? `${target.kg}` : "kg"}
                           onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
-                          className="w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          disabled={set.done}
+                          className="w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed"
                         />
                         <span className="text-muted-foreground text-[10px] font-mono">kg</span>
                         <input
@@ -224,13 +234,25 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           value={set.rir !== undefined && set.rir !== null ? set.rir : ""}
                           placeholder="RIR"
                           onChange={(e) => updateSet(exIdx, setIdx, "rir", Number(e.target.value))}
-                          className="w-12 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          disabled={set.done}
+                          className="w-12 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed"
                           title="Reps in Reserve (wie viele Wiederholungen noch möglich gewesen wären)"
                         />
-                        {ex.sets.length > 1 && (
+                        <button
+                          onClick={() => toggleSetDone(exIdx, setIdx)}
+                          className={`p-1 rounded transition-colors ${
+                            set.done
+                              ? 'bg-primary/20 text-primary'
+                              : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
+                          }`}
+                          title={set.done ? "Set bearbeiten" : "Set abschließen"}
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                        {ex.sets.length > 1 && !set.done && (
                           <button
                             onClick={() => removeSet(exIdx, setIdx)}
-                            className="text-muted-foreground hover:text-destructive transition-colors ml-auto"
+                            className="text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <Trash2 className="w-2.5 h-2.5" />
                           </button>
