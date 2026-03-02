@@ -247,13 +247,13 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
     }
   }
 
-  // Get days_done from week record
+  // Get days_done from week record (cast to any since column may not be in generated types yet)
   const { data: weekMeta } = await supabase
     .from("workout_weeks")
-    .select("days_done")
+    .select("*")
     .eq("id", weekRow.id)
     .single();
-  const daysDone: string[] = (weekMeta?.days_done as string[]) || [];
+  const daysDone: string[] = ((weekMeta as any)?.days_done as string[]) || [];
 
   // Build the WeekLog structure
   const days: DayLog[] = FULL_DAYS.map((day) => {
@@ -289,11 +289,11 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
 
   if (!weekRow) return;
 
-  // Save days_done status
+  // Save days_done status (cast to any to bypass generated types)
   const daysDone = week.days.filter((d) => d.done).map((d) => d.day);
   await supabase
     .from("workout_weeks")
-    .update({ days_done: daysDone })
+    .update({ days_done: daysDone } as any)
     .eq("id", weekRow.id);
 
   // Delete existing exercises for this week
