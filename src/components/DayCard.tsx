@@ -217,9 +217,13 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                   {ex.sets.map((set, setIdx) => {
                     const target = targets[setIdx];
                     return (
-                    <div key={setIdx} className={`flex items-center gap-1.5 ${set.done ? 'opacity-50' : ''}`}>
-                        <span className="font-mono text-[10px] text-muted-foreground w-4">
-                          {setIdx + 1}
+                    <div key={setIdx} className={`flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 transition-all ${
+                      set.done 
+                        ? 'bg-primary/8 border border-primary/20' 
+                        : ''
+                    }`}>
+                        <span className={`font-mono text-[10px] w-4 ${set.done ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {set.done ? '✓' : setIdx + 1}
                         </span>
                         <input
                           type="number"
@@ -228,9 +232,13 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           placeholder={target ? `${target.reps}` : "reps"}
                           onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
                           disabled={set.done}
-                          className={`w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed ${getRepColor(set.reps, ex.exercise)}`}
+                          className={`w-14 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed transition-all ${
+                            set.done 
+                              ? 'bg-primary/5 border border-primary/20 text-primary font-semibold' 
+                              : 'bg-secondary border border-border text-foreground placeholder:text-muted-foreground'
+                          } ${getRepColor(set.reps, ex.exercise)}`}
                         />
-                        <span className="text-muted-foreground text-[10px]">×</span>
+                        <span className={`text-[10px] ${set.done ? 'text-primary/60' : 'text-muted-foreground'}`}>×</span>
                         <input
                           type="number"
                           min={0}
@@ -239,9 +247,13 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           placeholder={target ? `${target.kg}` : "kg"}
                           onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
                           disabled={set.done}
-                          className="w-14 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed"
+                          className={`w-14 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed transition-all ${
+                            set.done 
+                              ? 'bg-primary/5 border border-primary/20 text-primary font-semibold' 
+                              : 'bg-secondary border border-border text-foreground placeholder:text-muted-foreground'
+                          }`}
                         />
-                        <span className="text-muted-foreground text-[10px] font-mono">kg</span>
+                        <span className={`text-[10px] font-mono ${set.done ? 'text-primary/60' : 'text-muted-foreground'}`}>kg</span>
                         <input
                           type="number"
                           min={0}
@@ -250,14 +262,18 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                           placeholder="RIR"
                           onChange={(e) => updateSet(exIdx, setIdx, "rir", Number(e.target.value))}
                           disabled={set.done}
-                          className="w-12 bg-secondary border border-border rounded px-1.5 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed"
-                          title="Reps in Reserve (wie viele Wiederholungen noch möglich gewesen wären)"
+                          className={`w-12 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed transition-all ${
+                            set.done 
+                              ? 'bg-primary/5 border border-primary/20 text-primary font-semibold' 
+                              : 'bg-secondary border border-border text-foreground placeholder:text-muted-foreground'
+                          }`}
+                          title="Reps in Reserve"
                         />
                         <button
                           onClick={() => toggleSetDone(exIdx, setIdx)}
-                          className={`p-1 rounded transition-colors ${
+                          className={`p-1 rounded-md transition-all ${
                             set.done
-                              ? 'bg-primary/20 text-primary'
+                              ? 'bg-primary text-primary-foreground shadow-sm'
                               : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
                           }`}
                           title={set.done ? "Set bearbeiten" : "Set abschließen"}
