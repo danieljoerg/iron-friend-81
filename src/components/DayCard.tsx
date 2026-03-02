@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target, Check, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState } from "react";
 import { computeTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
@@ -10,12 +10,28 @@ interface DayCardProps {
   onChange: (updated: DayLog) => void;
   repRanges?: Record<string, RepRange>;
   onRepRangeChange?: (exercise: string, min: number, max: number) => void;
+  onYoutubeUrlChange?: (exercise: string, url: string | null) => void;
   prevDayExercises?: ExerciseLog[];
   expanded: boolean;
   onToggleExpanded: () => void;
 }
 
-export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, prevDayExercises, expanded, onToggleExpanded }: DayCardProps) {
+function getYoutubeEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    let videoId: string | null = null;
+    if (u.hostname.includes("youtube.com")) {
+      videoId = u.searchParams.get("v");
+    } else if (u.hostname.includes("youtu.be")) {
+      videoId = u.pathname.slice(1);
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+  } catch {
+    return null;
+  }
+}
+
+export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
   dayDate.setDate(dayDate.getDate() + dayIndex);
@@ -23,6 +39,9 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
   const [editingRange, setEditingRange] = useState<string | null>(null);
+  const [videoOverlay, setVideoOverlay] = useState<string | null>(null);
+  const [editingYoutube, setEditingYoutube] = useState<string | null>(null);
+  const [youtubeInput, setYoutubeInput] = useState("");
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -173,6 +192,32 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                 )}
               </div>
               <div className="flex items-center gap-1">
+                {range?.youtube_url && (
+                  <button
+                    onClick={() => {
+                      const embedUrl = getYoutubeEmbedUrl(range.youtube_url!);
+                      if (embedUrl) setVideoOverlay(embedUrl);
+                    }}
+                    className="text-red-500 hover:text-red-400 transition-colors p-0.5"
+                    title="Video ansehen"
+                  >
+                    <Youtube className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (editingYoutube === ex.exercise) {
+                      setEditingYoutube(null);
+                    } else {
+                      setEditingYoutube(ex.exercise);
+                      setYoutubeInput(range?.youtube_url || "");
+                    }
+                  }}
+                  className="text-muted-foreground hover:text-primary transition-colors p-0.5"
+                  title="YouTube Video verlinken"
+                >
+                  <Link className="w-3 h-3" />
+                </button>
                 <button
                   onClick={() => setEditingRange(editingRange === ex.exercise ? null : ex.exercise)}
                   className="text-muted-foreground hover:text-primary transition-colors p-0.5"
@@ -223,6 +268,41 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
                 >
                   done
                 </button>
+              </div>
+            )}
+
+            {editingYoutube === ex.exercise && (
+              <div className="flex items-center gap-1.5 mb-2 bg-secondary rounded-lg p-2">
+                <Youtube className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <input
+                  type="url"
+                  value={youtubeInput}
+                  onChange={(e) => setYoutubeInput(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="flex-1 min-w-0 bg-background border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  onClick={() => {
+                    const url = youtubeInput.trim() || null;
+                    onYoutubeUrlChange?.(ex.exercise, url);
+                    setEditingYoutube(null);
+                  }}
+                  className="text-[10px] font-mono text-primary shrink-0"
+                >
+                  save
+                </button>
+                {range?.youtube_url && (
+                  <button
+                    onClick={() => {
+                      onYoutubeUrlChange?.(ex.exercise, null);
+                      setYoutubeInput("");
+                      setEditingYoutube(null);
+                    }}
+                    className="text-[10px] font-mono text-destructive shrink-0"
+                  >
+                    remove
+                  </button>
+                )}
               </div>
             )}
 
@@ -383,6 +463,26 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
         </button>
       )}
       </div>}
+
+      {/* YouTube Video Overlay */}
+      {videoOverlay && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setVideoOverlay(null)}>
+          <div className="relative w-full max-w-2xl aspect-video" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setVideoOverlay(null)}
+              className="absolute -top-10 right-0 text-white hover:text-primary transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <iframe
+              src={videoOverlay}
+              className="w-full h-full rounded-xl"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.exercise_rep_ranges ADD COLUMN youtube_url text DEFAULT NULL;
