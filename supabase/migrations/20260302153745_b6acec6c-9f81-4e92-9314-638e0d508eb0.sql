@@ -1,0 +1,1 @@
+ALTER TABLE public.workout_weeks ADD COLUMN days_done jsonb NOT NULL DEFAULT '[]'::jsonb;

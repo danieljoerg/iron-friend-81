@@ -130,6 +130,7 @@ export type Database = {
       workout_weeks: {
         Row: {
           created_at: string
+          days_done: Json
           id: string
           updated_at: string
           user_id: string
@@ -137,6 +138,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          days_done?: Json
           id?: string
           updated_at?: string
           user_id: string
@@ -144,6 +146,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          days_done?: Json
           id?: string
           updated_at?: string
           user_id?: string
