@@ -93,12 +93,31 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
     return "ring-1 ring-primary/50";
   };
 
-  return (
+    const allSetsDone = dayLog.exercises.length > 0 && dayLog.exercises.every(ex => ex.sets.every(s => s.done));
+    const dayDone = dayLog.done === true;
+
+    const toggleDayDone = () => {
+      if (dayDone) {
+        // Reopen day: unmark day, keep sets as they are
+        onChange({ ...dayLog, done: false });
+      } else {
+        // Mark day done: also mark all sets done
+        const exercises = dayLog.exercises.map(ex => ({
+          ...ex,
+          sets: ex.sets.map(s => ({ ...s, done: true })),
+        }));
+        onChange({ ...dayLog, exercises, done: true });
+      }
+    };
+
+    return (
     <div
       className={`rounded-xl border p-4 transition-all ${
-        isToday
-          ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
-          : "border-border bg-card"
+        dayDone
+          ? "border-primary/40 bg-primary/5"
+          : isToday
+            ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
+            : "border-border bg-card"
       }`}
     >
       <button
@@ -107,13 +126,18 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
       >
         <div className="flex items-center gap-2">
           <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expanded ? '' : '-rotate-90'}`} />
-          <h3 className="font-heading font-semibold text-sm">
-            {dayLog.day}
+          <h3 className={`font-heading font-semibold text-sm ${dayDone ? 'text-primary' : ''}`}>
+            {dayDone ? '✓ ' : ''}{dayLog.day}
           </h3>
           <span className="text-[10px] font-mono text-muted-foreground">{dateStr}</span>
-          {isToday && (
+          {isToday && !dayDone && (
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
               Today
+            </span>
+          )}
+          {dayDone && (
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
+              Done
             </span>
           )}
         </div>
@@ -342,6 +366,19 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
         >
           <Plus className="w-3 h-3" />
           Exercise
+        </button>
+      )}
+      {dayLog.exercises.length > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleDayDone(); }}
+          className={`mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-mono font-medium transition-all ${
+            dayDone
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10 border border-border'
+          }`}
+        >
+          <Check className="w-3.5 h-3.5" />
+          {dayDone ? 'Tag erledigt ✓' : 'Tag abschließen'}
         </button>
       )}
       </div>}
