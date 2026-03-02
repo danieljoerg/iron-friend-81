@@ -151,6 +151,7 @@ export type ExerciseLog = {
 export type DayLog = {
   day: string;
   exercises: ExerciseLog[];
+  done?: boolean;
 };
 
 export type WeekLog = {
