@@ -86,10 +86,21 @@ const Index = () => {
   const todayName = FULL_DAYS[todayIdx];
   const isCurrentWeek = weekStart === getWeekStart();
 
-  // Set initial expanded day to today when on current week
+  // Set initial expanded day: skip done days, default to today or first non-done
   useEffect(() => {
-    setExpandedDay(isCurrentWeek ? todayIdx : null);
-  }, [weekStart]);
+    if (isCurrentWeek) {
+      // If today is done, find next non-done day
+      if (week.days[todayIdx]?.done) {
+        const nextNonDone = week.days.findIndex((d, i) => i > todayIdx && !d.done);
+        setExpandedDay(nextNonDone >= 0 ? nextNonDone : null);
+      } else {
+        setExpandedDay(todayIdx);
+      }
+    } else {
+      const firstNonDone = week.days.findIndex((d) => !d.done);
+      setExpandedDay(firstNonDone >= 0 ? firstNonDone : null);
+    }
+  }, [weekStart, loading]);
 
   return (
     <div className="min-h-screen bg-background">

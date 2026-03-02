@@ -247,6 +247,14 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
     }
   }
 
+  // Get days_done from week record
+  const { data: weekMeta } = await supabase
+    .from("workout_weeks")
+    .select("days_done")
+    .eq("id", weekRow.id)
+    .single();
+  const daysDone: string[] = (weekMeta?.days_done as string[]) || [];
+
   // Build the WeekLog structure
   const days: DayLog[] = FULL_DAYS.map((day) => {
     const dayExercises: ExerciseLog[] = (exercises || [])
@@ -255,7 +263,7 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
         exercise: e.exercise,
         sets: (e.sets as any[]) || [],
       }));
-    return { day, exercises: dayExercises };
+    return { day, exercises: dayExercises, done: daysDone.includes(day) };
   });
 
   return { weekStart, days };
@@ -280,6 +288,13 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
   }
 
   if (!weekRow) return;
+
+  // Save days_done status
+  const daysDone = week.days.filter((d) => d.done).map((d) => d.day);
+  await supabase
+    .from("workout_weeks")
+    .update({ days_done: daysDone })
+    .eq("id", weekRow.id);
 
   // Delete existing exercises for this week
   await supabase
