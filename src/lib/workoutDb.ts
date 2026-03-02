@@ -2,6 +2,58 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type RepRange = { exercise: string; min_reps: number; max_reps: number; youtube_url?: string };
 
+// ===== Mesocycle functions =====
+
+export type Mesocycle = {
+  id: string;
+  user_id: string;
+  start_week: string;
+  duration_weeks: number;
+  created_at: string;
+};
+
+export async function getActiveMesocycle(userId: string): Promise<Mesocycle | null> {
+  const { data } = await supabase
+    .from("mesocycles")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1) as any;
+  if (!data || data.length === 0) return null;
+  return data[0] as Mesocycle;
+}
+
+export async function createMesocycle(userId: string, startWeek: string, durationWeeks: number): Promise<Mesocycle> {
+  const { data } = await supabase
+    .from("mesocycles")
+    .insert({ user_id: userId, start_week: startWeek, duration_weeks: durationWeeks } as any)
+    .select("*")
+    .single() as any;
+  return data as Mesocycle;
+}
+
+export async function deleteMesocycle(mesocycleId: string): Promise<void> {
+  await supabase.from("mesocycles").delete().eq("id", mesocycleId) as any;
+}
+
+export function getMesocycleWeekInfo(mesocycle: Mesocycle, currentWeekStart: string): { weekNumber: number; totalWeeks: number; isDeload: boolean; isInMeso: boolean } {
+  const start = new Date(mesocycle.start_week + "T00:00:00");
+  const current = new Date(currentWeekStart + "T00:00:00");
+  const diffMs = current.getTime() - start.getTime();
+  const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+  const weekNumber = diffWeeks + 1;
+  const isInMeso = weekNumber >= 1 && weekNumber <= mesocycle.duration_weeks;
+  const isDeload = isInMeso && weekNumber === mesocycle.duration_weeks;
+  return { weekNumber, totalWeeks: mesocycle.duration_weeks, isDeload, isInMeso };
+}
+
+export function computeDeloadTargets(prevSets: { reps: number; kg: number }[]): { reps: number; kg: number }[] {
+  return prevSets.map((s) => ({
+    reps: s.reps,
+    kg: Math.round(s.kg * 0.55 * 2) / 2, // ~55% weight, rounded to 0.5
+  }));
+}
+
 export async function getRepRangesDb(userId: string): Promise<Record<string, RepRange>> {
   const { data } = await supabase
     .from("exercise_rep_ranges")

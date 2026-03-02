@@ -1,7 +1,7 @@
 import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState } from "react";
-import { computeTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
 
 interface DayCardProps {
   dayLog: DayLog;
@@ -14,6 +14,7 @@ interface DayCardProps {
   prevDayExercises?: ExerciseLog[];
   expanded: boolean;
   onToggleExpanded: () => void;
+  isDeloadWeek?: boolean;
 }
 
 function getYoutubeEmbedUrl(url: string): string | null {
@@ -31,7 +32,7 @@ function getYoutubeEmbedUrl(url: string): string | null {
   }
 }
 
-export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded }: DayCardProps) {
+export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded, isDeloadWeek }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
   dayDate.setDate(dayDate.getDate() + dayIndex);
@@ -308,14 +309,15 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
 
             {(() => {
               const prevEx = prevDayExercises?.find((p) => p.exercise === ex.exercise);
-              const targets = prevEx ? computeTargets(prevEx.sets, repRanges?.[ex.exercise] ? { ...repRanges[ex.exercise] } : undefined) : [];
+              const normalTargets = prevEx ? computeTargets(prevEx.sets, repRanges?.[ex.exercise] ? { ...repRanges[ex.exercise] } : undefined) : [];
+              const targets = isDeloadWeek && prevEx ? computeDeloadTargets(prevEx.sets) : normalTargets;
               return (
                 <div className="space-y-1">
                   {targets.length > 0 && (
                     <div className="flex items-center gap-1 mb-1">
-                      <Target className="w-2.5 h-2.5 text-primary/60" />
-                      <span className="text-[9px] font-mono text-primary/60">
-                        Ziel: {targets.map((t) => `${t.reps}×${t.kg}kg`).join(", ")}
+                      <Target className={`w-2.5 h-2.5 ${isDeloadWeek ? 'text-yellow-500/60' : 'text-primary/60'}`} />
+                      <span className={`text-[9px] font-mono ${isDeloadWeek ? 'text-yellow-600/60' : 'text-primary/60'}`}>
+                        {isDeloadWeek ? 'Deload: ' : 'Ziel: '}{targets.map((t) => `${t.reps}×${t.kg}kg`).join(", ")}
                       </span>
                     </div>
                   )}

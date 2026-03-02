@@ -8,7 +8,8 @@ import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
 import { getWeekStart, formatDateString, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
-import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, getActiveMesocycle, createMesocycle, deleteMesocycle, getMesocycleWeekInfo, computeDeloadTargets, type RepRange, type ExerciseTarget, type Mesocycle } from "@/lib/workoutDb";
+import MesocycleBanner from "@/components/MesocycleBanner";
 import type { ExerciseLog } from "@/lib/workoutData";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -26,6 +27,7 @@ const Index = () => {
   const [prevWeekData, setPrevWeekData] = useState<Record<string, ExerciseLog[]>>({});
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -40,10 +42,12 @@ const Index = () => {
       getOrCreateWeekDb(weekStart, user.id),
       getRepRangesDb(user.id),
       getPreviousWeekData(weekStart, user.id),
-    ]).then(([w, rr, prev]) => {
+      getActiveMesocycle(user.id),
+    ]).then(([w, rr, prev, meso]) => {
       setWeek(w);
       setRepRanges(rr);
       setPrevWeekData(prev);
+      setMesocycle(meso);
       setLoading(false);
     });
   }, [weekStart, user]);
@@ -68,6 +72,20 @@ const Index = () => {
   };
 
   const goToToday = () => setWeekStart(getWeekStart());
+
+  const handleCreateMesocycle = async (durationWeeks: number) => {
+    if (!user) return;
+    const meso = await createMesocycle(user.id, weekStart, durationWeeks);
+    setMesocycle(meso);
+  };
+
+  const handleDeleteMesocycle = async () => {
+    if (!mesocycle) return;
+    await deleteMesocycle(mesocycle.id);
+    setMesocycle(null);
+  };
+
+  const mesoWeekInfo = mesocycle ? getMesocycleWeekInfo(mesocycle, weekStart) : null;
 
   const handleDayChange = useCallback(
     (dayIndex: number, updatedDay: typeof week.days[0]) => {
@@ -148,6 +166,12 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="tracking">
+            <MesocycleBanner
+              mesocycle={mesocycle}
+              weekStart={weekStart}
+              onCreateMesocycle={handleCreateMesocycle}
+              onDeleteMesocycle={handleDeleteMesocycle}
+            />
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -167,6 +191,7 @@ const Index = () => {
                     prevDayExercises={prevWeekData[dayLog.day] || []}
                     expanded={expandedDay === idx}
                     onToggleExpanded={() => setExpandedDay(expandedDay === idx ? null : idx)}
+                    isDeloadWeek={mesoWeekInfo?.isDeload ?? false}
                   />
                 ))}
               </div>
