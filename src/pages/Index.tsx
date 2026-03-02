@@ -116,19 +116,19 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Top bar: greeting + settings */}
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="font-heading font-bold text-lg">
+        <div className="flex items-center justify-center gap-2 mb-1 relative">
+          <h1 className="font-heading font-bold text-lg text-center">
             {displayName ? `Hey, ${displayName} 👋` : "Lift Log"}
           </h1>
           <button
             onClick={() => navigate("/profile")}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+            className="absolute right-0 p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
             title="Profil & Einstellungen"
           >
             <Settings className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-muted-foreground text-xs font-mono mb-5">Progressive overload tracker</p>
+        <p className="text-muted-foreground text-xs font-mono mb-5 text-center">Progressive overload tracker</p>
 
         {/* Week navigation */}
         <div className="flex items-center justify-center mb-5">
