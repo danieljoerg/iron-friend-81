@@ -87,9 +87,10 @@ const Index = () => {
   const isCurrentWeek = weekStart === getWeekStart();
 
   // Set initial expanded day: skip done days, default to today or first non-done
+  // Runs after week data is loaded (loading transitions to false)
   useEffect(() => {
+    if (loading) return; // Wait until data is loaded
     if (isCurrentWeek) {
-      // If today is done, find next non-done day
       if (week.days[todayIdx]?.done) {
         const nextNonDone = week.days.findIndex((d, i) => i > todayIdx && !d.done);
         setExpandedDay(nextNonDone >= 0 ? nextNonDone : null);
@@ -100,6 +101,7 @@ const Index = () => {
       const firstNonDone = week.days.findIndex((d) => !d.done);
       setExpandedDay(firstNonDone >= 0 ? firstNonDone : null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, loading]);
 
   return (
