@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target, Check } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check, ChevronDown } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState } from "react";
 import { computeTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
@@ -21,6 +21,7 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
   const [editingRange, setEditingRange] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(isToday);
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -100,8 +101,12 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
           : "border-border bg-card"
       }`}
     >
-      <div className="flex items-center justify-between mb-3">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center justify-between w-full mb-0"
+      >
         <div className="flex items-center gap-2">
+          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expanded ? '' : '-rotate-90'}`} />
           <h3 className="font-heading font-semibold text-sm">
             {dayLog.day}
           </h3>
@@ -112,12 +117,22 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
             </span>
           )}
         </div>
-        {totalVolume > 0 && (
-          <span className="font-mono text-xs text-muted-foreground">
-            {totalVolume.toLocaleString()} kg vol
-          </span>
-        )}
-      </div>
+        <div className="flex items-center gap-2">
+          {!expanded && dayLog.exercises.length > 0 && (
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {dayLog.exercises.length} {dayLog.exercises.length === 1 ? 'Übung' : 'Übungen'}
+              {totalVolume > 0 && ` · ${totalVolume.toLocaleString()} kg`}
+            </span>
+          )}
+          {expanded && totalVolume > 0 && (
+            <span className="font-mono text-xs text-muted-foreground">
+              {totalVolume.toLocaleString()} kg vol
+            </span>
+          )}
+        </div>
+      </button>
+
+      {expanded && <div className="mt-3">
 
       {dayLog.exercises.map((ex, exIdx) => {
         const range = repRanges?.[ex.exercise];
@@ -313,6 +328,7 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
           Exercise
         </button>
       )}
+      </div>}
     </div>
   );
 }
