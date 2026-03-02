@@ -25,6 +25,7 @@ const Index = () => {
   const [repRanges, setRepRanges] = useState<Record<string, RepRange>>({});
   const [prevWeekData, setPrevWeekData] = useState<Record<string, ExerciseLog[]>>({});
   const [loading, setLoading] = useState(true);
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -71,13 +72,24 @@ const Index = () => {
       if (user) {
         saveWeekDb(updatedWeek, user.id);
       }
+      // If day was marked done, collapse it and expand next day
+      if (updatedDay.done) {
+        const nextDay = dayIndex < 6 ? dayIndex + 1 : null;
+        setExpandedDay(nextDay);
+      }
     },
     [week, user]
   );
 
   const today = new Date();
-  const todayName = FULL_DAYS[today.getDay() === 0 ? 6 : today.getDay() - 1];
+  const todayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const todayName = FULL_DAYS[todayIdx];
   const isCurrentWeek = weekStart === getWeekStart();
+
+  // Set initial expanded day to today when on current week
+  useEffect(() => {
+    setExpandedDay(isCurrentWeek ? todayIdx : null);
+  }, [weekStart]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -131,6 +143,8 @@ const Index = () => {
                     repRanges={repRanges}
                     onRepRangeChange={handleRepRangeChange}
                     prevDayExercises={prevWeekData[dayLog.day] || []}
+                    expanded={expandedDay === idx}
+                    onToggleExpanded={() => setExpandedDay(expandedDay === idx ? null : idx)}
                   />
                 ))}
               </div>
