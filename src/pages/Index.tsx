@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Dumbbell, LogOut, User, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -129,6 +129,40 @@ const Index = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, loading]);
+
+  // Persist scroll position across tab hide/show (e.g. closing browser between sets)
+  useEffect(() => {
+    const SCROLL_KEY = "lift-log-scroll-pos";
+
+    // Restore saved scroll position after content is loaded
+    if (!loading) {
+      const saved = sessionStorage.getItem(SCROLL_KEY);
+      if (saved) {
+        const pos = parseInt(saved, 10);
+        // Small delay to let DOM render
+        requestAnimationFrame(() => {
+          window.scrollTo(0, pos);
+        });
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [loading]);
 
   return (
     <div className="min-h-screen bg-background">
