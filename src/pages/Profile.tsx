@@ -4,6 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { FULL_DAYS } from "@/lib/workoutData";
+
+const DAY_LABELS: Record<string, string> = {
+  Monday: "Mo", Tuesday: "Di", Wednesday: "Mi", Thursday: "Do",
+  Friday: "Fr", Saturday: "Sa", Sunday: "So",
+};
 
 interface ProfileData {
   display_name: string;
@@ -12,6 +18,7 @@ interface ProfileData {
   body_weight: number | null;
   height: number | null;
   training_experience: string;
+  training_days: string[];
 }
 
 const GENDER_OPTIONS = ["Männlich", "Weiblich", "Divers"];
@@ -29,13 +36,14 @@ export default function Profile() {
     body_weight: null,
     height: null,
     training_experience: "",
+    training_days: ["Monday", "Tuesday", "Thursday", "Friday"],
   });
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("display_name, age, gender, body_weight, height, training_experience")
+      .select("display_name, age, gender, body_weight, height, training_experience, training_days")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -47,6 +55,7 @@ export default function Profile() {
             body_weight: data.body_weight ? Number(data.body_weight) : null,
             height: data.height ? Number(data.height) : null,
             training_experience: data.training_experience || "",
+            training_days: Array.isArray(data.training_days) ? data.training_days as string[] : ["Monday", "Tuesday", "Thursday", "Friday"],
           });
         }
         setLoading(false);
@@ -65,6 +74,7 @@ export default function Profile() {
         body_weight: profile.body_weight,
         height: profile.height,
         training_experience: profile.training_experience || null,
+        training_days: profile.training_days,
       })
       .eq("user_id", user.id);
 
@@ -180,6 +190,34 @@ export default function Profile() {
                 <option key={e} value={e}>{e}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-mono text-muted-foreground mb-2 block">Trainingstage</label>
+            <div className="flex gap-1.5">
+              {FULL_DAYS.map((day) => {
+                const active = profile.training_days.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      const days = active
+                        ? profile.training_days.filter((d) => d !== day)
+                        : [...profile.training_days, day];
+                      setProfile({ ...profile, training_days: days });
+                    }}
+                    className={`flex-1 py-2 rounded-lg text-xs font-mono font-medium transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {DAY_LABELS[day]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <button

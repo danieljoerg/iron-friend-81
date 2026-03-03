@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN training_days jsonb NOT NULL DEFAULT '["Monday","Tuesday","Thursday","Friday"]'::jsonb;

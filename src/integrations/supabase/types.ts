@@ -83,6 +83,7 @@ export type Database = {
           gender: string | null
           height: number | null
           id: string
+          training_days: Json
           training_experience: string | null
           updated_at: string
           user_id: string
@@ -95,6 +96,7 @@ export type Database = {
           gender?: string | null
           height?: number | null
           id?: string
+          training_days?: Json
           training_experience?: string | null
           updated_at?: string
           user_id: string
@@ -107,6 +109,7 @@ export type Database = {
           gender?: string | null
           height?: number | null
           id?: string
+          training_days?: Json
           training_experience?: string | null
           updated_at?: string
           user_id?: string
