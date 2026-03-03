@@ -190,6 +190,9 @@ const Index = () => {
             onNext={() => navigateWeek(1)}
             onToday={goToToday}
             onDateSelect={(date) => setWeekStart(getWeekStartForDate(date))}
+            mesocycle={mesocycle}
+            onCreateMesocycle={handleCreateMesocycle}
+            onDeleteMesocycle={handleDeleteMesocycle}
           />
         </div>
 
@@ -200,12 +203,6 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="tracking">
-            <MesocycleBanner
-              mesocycle={mesocycle}
-              weekStart={weekStart}
-              onCreateMesocycle={handleCreateMesocycle}
-              onDeleteMesocycle={handleDeleteMesocycle}
-            />
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
