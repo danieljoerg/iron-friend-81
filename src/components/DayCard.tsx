@@ -6,6 +6,7 @@ import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarge
 interface DayCardProps {
   dayLog: DayLog;
   isToday: boolean;
+  isRestDay?: boolean;
   weekStart: string;
   onChange: (updated: DayLog) => void;
   repRanges?: Record<string, RepRange>;
@@ -32,7 +33,7 @@ function getYoutubeEmbedUrl(url: string): string | null {
   }
 }
 
-export default function DayCard({ dayLog, isToday, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded, isDeloadWeek }: DayCardProps) {
+export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded, isDeloadWeek }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
   dayDate.setDate(dayDate.getDate() + dayIndex);
@@ -138,7 +139,9 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
           ? "border-primary/40 bg-primary/5"
           : isToday
             ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
-            : "border-border bg-card"
+            : isRestDay && dayLog.exercises.length === 0
+              ? "border-border/50 bg-muted/30 opacity-60"
+              : "border-border bg-card"
       }`}
     >
       <button
@@ -159,6 +162,11 @@ export default function DayCard({ dayLog, isToday, weekStart, onChange, repRange
           {dayDone && (
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
               Done
+            </span>
+          )}
+          {isRestDay && !dayDone && dayLog.exercises.length === 0 && (
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              Rest
             </span>
           )}
         </div>
