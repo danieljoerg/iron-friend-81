@@ -25,7 +25,8 @@ const Index = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [repRanges, setRepRanges] = useState<Record<string, RepRange>>({});
   const [prevWeekData, setPrevWeekData] = useState<Record<string, ExerciseLog[]>>({});
-  const [trainingDays, setTrainingDays] = useState<string[]>(["Monday", "Tuesday", "Thursday", "Friday"]);
+  const [defaultTrainingDays, setDefaultTrainingDays] = useState<string[]>(["Monday", "Tuesday", "Thursday", "Friday"]);
+  const [weekTrainingDays, setWeekTrainingDays] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
@@ -35,7 +36,7 @@ const Index = () => {
     supabase.from("profiles").select("display_name, training_days").eq("user_id", user.id).maybeSingle()
       .then(({ data }) => {
         if (data?.display_name) setDisplayName(data.display_name);
-        if (Array.isArray(data?.training_days)) setTrainingDays(data.training_days as string[]);
+        if (Array.isArray(data?.training_days)) setDefaultTrainingDays(data.training_days as string[]);
       });
   }, [user]);
 
@@ -52,6 +53,7 @@ const Index = () => {
       setRepRanges(rr);
       setPrevWeekData(prev);
       setMesocycle(meso);
+      setWeekTrainingDays(w.trainingDays ?? null);
       setLoading(false);
     });
   }, [weekStart, user]);

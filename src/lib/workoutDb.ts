@@ -348,11 +348,11 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
 
   if (!weekRow) return;
 
-  // Save days_done status (cast to any to bypass generated types)
+  // Save days_done and training_days status
   const daysDone = week.days.filter((d) => d.done).map((d) => d.day);
   await supabase
     .from("workout_weeks")
-    .update({ days_done: daysDone } as any)
+    .update({ days_done: daysDone, training_days: week.trainingDays ?? null } as any)
     .eq("id", weekRow.id);
 
   // Delete existing exercises for this week
