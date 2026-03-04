@@ -72,13 +72,6 @@ export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDat
 
       {/* Row 2: training days toggle */}
       <div className="flex items-center gap-1">
-        <button
-          onClick={() => setDaysOpen(!daysOpen)}
-          className={`p-0.5 rounded transition-colors ${daysOpen ? 'text-primary' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
-          title="Trainingstage anpassen"
-        >
-          <CalendarDays className="w-3 h-3" />
-        </button>
         {daysOpen ? (
           <div className="flex items-center gap-0.5">
             {DAY_KEYS.map((day, i) => (
@@ -103,21 +96,33 @@ export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDat
                 <RotateCcw className="w-2.5 h-2.5" />
               </button>
             )}
+            <button
+              onClick={() => setDaysOpen(false)}
+              className="text-[10px] font-mono text-muted-foreground/50 hover:text-foreground transition-colors ml-0.5"
+            >
+              ✕
+            </button>
           </div>
         ) : (
-          <div className="flex gap-0.5">
-            {DAY_KEYS.map((day, i) => (
-              <div
-                key={day}
-                className={`w-1.5 h-1.5 rounded-full ${
-                  trainingDays.includes(day) ? "bg-primary" : "bg-secondary"
-                }`}
-              />
-            ))}
+          <button
+            onClick={() => setDaysOpen(true)}
+            className="flex items-center gap-1 px-1 py-0.5 rounded hover:bg-secondary/80 transition-colors"
+            title="Trainingstage anpassen"
+          >
+            <div className="flex gap-0.5">
+              {DAY_KEYS.map((day) => (
+                <div
+                  key={day}
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    trainingDays.includes(day) ? "bg-primary" : "bg-secondary"
+                  }`}
+                />
+              ))}
+            </div>
             {hasWeekOverride && (
-              <span className="text-[8px] font-mono text-primary ml-0.5">✎</span>
+              <span className="text-[8px] font-mono text-primary">✎</span>
             )}
-          </div>
+          </button>
         )}
       </div>
 
