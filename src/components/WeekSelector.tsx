@@ -1,10 +1,13 @@
-import { ChevronLeft, ChevronRight, CalendarIcon, Repeat, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarIcon, Repeat, Plus, Trash2, CalendarDays, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
+
+const SHORT_DAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const DAY_KEYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 interface WeekSelectorProps {
   weekStart: string;
@@ -15,11 +18,16 @@ interface WeekSelectorProps {
   mesocycle: Mesocycle | null;
   onCreateMesocycle: (durationWeeks: number) => void;
   onDeleteMesocycle: () => void;
+  trainingDays: string[];
+  hasWeekOverride: boolean;
+  onToggleDay: (day: string) => void;
+  onResetDays: () => void;
 }
 
-export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDateSelect, mesocycle, onCreateMesocycle, onDeleteMesocycle }: WeekSelectorProps) {
+export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDateSelect, mesocycle, onCreateMesocycle, onDeleteMesocycle, trainingDays, hasWeekOverride, onToggleDay, onResetDays }: WeekSelectorProps) {
   const [calOpen, setCalOpen] = useState(false);
   const [mesoOpen, setMesoOpen] = useState(false);
+  const [daysOpen, setDaysOpen] = useState(false);
   const [duration, setDuration] = useState(6);
   const start = new Date(weekStart + "T00:00:00");
   const end = new Date(start);
@@ -62,7 +70,58 @@ export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDat
         </button>
       </div>
 
-      {/* Row 2: mesocycle indicator */}
+      {/* Row 2: training days toggle */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setDaysOpen(!daysOpen)}
+          className={`p-0.5 rounded transition-colors ${daysOpen ? 'text-primary' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+          title="Trainingstage anpassen"
+        >
+          <CalendarDays className="w-3 h-3" />
+        </button>
+        {daysOpen ? (
+          <div className="flex items-center gap-0.5">
+            {DAY_KEYS.map((day, i) => (
+              <button
+                key={day}
+                onClick={() => onToggleDay(day)}
+                className={`w-5 h-5 rounded text-[9px] font-mono transition-all ${
+                  trainingDays.includes(day)
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {SHORT_DAYS[i]}
+              </button>
+            ))}
+            {hasWeekOverride && (
+              <button
+                onClick={onResetDays}
+                className="p-0.5 text-muted-foreground/50 hover:text-primary transition-colors ml-0.5"
+                title="Auf Standard zurücksetzen"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-0.5">
+            {DAY_KEYS.map((day, i) => (
+              <div
+                key={day}
+                className={`w-1.5 h-1.5 rounded-full ${
+                  trainingDays.includes(day) ? "bg-primary" : "bg-secondary"
+                }`}
+              />
+            ))}
+            {hasWeekOverride && (
+              <span className="text-[8px] font-mono text-primary ml-0.5">✎</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Row 3: mesocycle indicator */}
       {!mesocycle && !mesoOpen && (
         <button
           onClick={() => setMesoOpen(true)}

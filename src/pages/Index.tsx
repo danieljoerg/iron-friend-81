@@ -25,7 +25,8 @@ const Index = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [repRanges, setRepRanges] = useState<Record<string, RepRange>>({});
   const [prevWeekData, setPrevWeekData] = useState<Record<string, ExerciseLog[]>>({});
-  const [trainingDays, setTrainingDays] = useState<string[]>(["Monday", "Tuesday", "Thursday", "Friday"]);
+  const [defaultTrainingDays, setDefaultTrainingDays] = useState<string[]>(["Monday", "Tuesday", "Thursday", "Friday"]);
+  const [weekTrainingDays, setWeekTrainingDays] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
@@ -35,7 +36,7 @@ const Index = () => {
     supabase.from("profiles").select("display_name, training_days").eq("user_id", user.id).maybeSingle()
       .then(({ data }) => {
         if (data?.display_name) setDisplayName(data.display_name);
-        if (Array.isArray(data?.training_days)) setTrainingDays(data.training_days as string[]);
+        if (Array.isArray(data?.training_days)) setDefaultTrainingDays(data.training_days as string[]);
       });
   }, [user]);
 
@@ -52,6 +53,7 @@ const Index = () => {
       setRepRanges(rr);
       setPrevWeekData(prev);
       setMesocycle(meso);
+      setWeekTrainingDays(w.trainingDays ?? null);
       setLoading(false);
     });
   }, [weekStart, user]);
@@ -90,6 +92,25 @@ const Index = () => {
   };
 
   const mesoWeekInfo = mesocycle ? getMesocycleWeekInfo(mesocycle, weekStart) : null;
+  const effectiveTrainingDays = weekTrainingDays ?? defaultTrainingDays;
+
+  const handleToggleWeekDay = (day: string) => {
+    const current = weekTrainingDays ?? [...defaultTrainingDays];
+    const updated = current.includes(day)
+      ? current.filter((d) => d !== day)
+      : [...current, day];
+    setWeekTrainingDays(updated);
+    const updatedWeek = { ...week, trainingDays: updated };
+    setWeek(updatedWeek);
+    if (user) saveWeekDb(updatedWeek, user.id);
+  };
+
+  const handleResetWeekDays = () => {
+    setWeekTrainingDays(null);
+    const updatedWeek = { ...week, trainingDays: null };
+    setWeek(updatedWeek);
+    if (user) saveWeekDb(updatedWeek, user.id);
+  };
 
   const handleDayChange = useCallback(
     (dayIndex: number, updatedDay: typeof week.days[0]) => {
@@ -197,6 +218,10 @@ const Index = () => {
             mesocycle={mesocycle}
             onCreateMesocycle={handleCreateMesocycle}
             onDeleteMesocycle={handleDeleteMesocycle}
+            trainingDays={effectiveTrainingDays}
+            hasWeekOverride={weekTrainingDays !== null}
+            onToggleDay={handleToggleWeekDay}
+            onResetDays={handleResetWeekDays}
           />
         </div>
 
@@ -218,7 +243,7 @@ const Index = () => {
                     key={dayLog.day}
                     dayLog={dayLog}
                     isToday={isCurrentWeek && dayLog.day === todayName}
-                    isRestDay={!trainingDays.includes(dayLog.day)}
+                    isRestDay={!effectiveTrainingDays.includes(dayLog.day)}
                     weekStart={weekStart}
                     onChange={(updated) => handleDayChange(idx, updated)}
                     repRanges={repRanges}

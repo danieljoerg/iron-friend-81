@@ -165,6 +165,7 @@ export type Database = {
           created_at: string
           days_done: Json
           id: string
+          training_days: Json | null
           updated_at: string
           user_id: string
           week_start: string
@@ -173,6 +174,7 @@ export type Database = {
           created_at?: string
           days_done?: Json
           id?: string
+          training_days?: Json | null
           updated_at?: string
           user_id: string
           week_start: string
@@ -181,6 +183,7 @@ export type Database = {
           created_at?: string
           days_done?: Json
           id?: string
+          training_days?: Json | null
           updated_at?: string
           user_id?: string
           week_start?: string
