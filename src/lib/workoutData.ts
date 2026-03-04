@@ -367,6 +367,7 @@ export type DayLog = {
 export type WeekLog = {
   weekStart: string; // ISO date string of Monday
   days: DayLog[];
+  trainingDays?: string[] | null; // Per-week override, null = use profile default
 };
 
 // Format a Date as YYYY-MM-DD in local time (avoids UTC shift from toISOString)
