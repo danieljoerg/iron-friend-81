@@ -70,7 +70,58 @@ export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDat
         </button>
       </div>
 
-      {/* Row 2: mesocycle indicator */}
+      {/* Row 2: training days toggle */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setDaysOpen(!daysOpen)}
+          className={`p-0.5 rounded transition-colors ${daysOpen ? 'text-primary' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+          title="Trainingstage anpassen"
+        >
+          <CalendarDays className="w-3 h-3" />
+        </button>
+        {daysOpen ? (
+          <div className="flex items-center gap-0.5">
+            {DAY_KEYS.map((day, i) => (
+              <button
+                key={day}
+                onClick={() => onToggleDay(day)}
+                className={`w-5 h-5 rounded text-[9px] font-mono transition-all ${
+                  trainingDays.includes(day)
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {SHORT_DAYS[i]}
+              </button>
+            ))}
+            {hasWeekOverride && (
+              <button
+                onClick={onResetDays}
+                className="p-0.5 text-muted-foreground/50 hover:text-primary transition-colors ml-0.5"
+                title="Auf Standard zurücksetzen"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-0.5">
+            {DAY_KEYS.map((day, i) => (
+              <div
+                key={day}
+                className={`w-1.5 h-1.5 rounded-full ${
+                  trainingDays.includes(day) ? "bg-primary" : "bg-secondary"
+                }`}
+              />
+            ))}
+            {hasWeekOverride && (
+              <span className="text-[8px] font-mono text-primary ml-0.5">✎</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Row 3: mesocycle indicator */}
       {!mesocycle && !mesoOpen && (
         <button
           onClick={() => setMesoOpen(true)}
