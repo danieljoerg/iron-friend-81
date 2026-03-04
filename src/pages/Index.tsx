@@ -92,6 +92,25 @@ const Index = () => {
   };
 
   const mesoWeekInfo = mesocycle ? getMesocycleWeekInfo(mesocycle, weekStart) : null;
+  const effectiveTrainingDays = weekTrainingDays ?? defaultTrainingDays;
+
+  const handleToggleWeekDay = (day: string) => {
+    const current = weekTrainingDays ?? [...defaultTrainingDays];
+    const updated = current.includes(day)
+      ? current.filter((d) => d !== day)
+      : [...current, day];
+    setWeekTrainingDays(updated);
+    const updatedWeek = { ...week, trainingDays: updated };
+    setWeek(updatedWeek);
+    if (user) saveWeekDb(updatedWeek, user.id);
+  };
+
+  const handleResetWeekDays = () => {
+    setWeekTrainingDays(null);
+    const updatedWeek = { ...week, trainingDays: null };
+    setWeek(updatedWeek);
+    if (user) saveWeekDb(updatedWeek, user.id);
+  };
 
   const handleDayChange = useCallback(
     (dayIndex: number, updatedDay: typeof week.days[0]) => {
@@ -199,6 +218,10 @@ const Index = () => {
             mesocycle={mesocycle}
             onCreateMesocycle={handleCreateMesocycle}
             onDeleteMesocycle={handleDeleteMesocycle}
+            trainingDays={effectiveTrainingDays}
+            hasWeekOverride={weekTrainingDays !== null}
+            onToggleDay={handleToggleWeekDay}
+            onResetDays={handleResetWeekDays}
           />
         </div>
 
@@ -220,7 +243,7 @@ const Index = () => {
                     key={dayLog.day}
                     dayLog={dayLog}
                     isToday={isCurrentWeek && dayLog.day === todayName}
-                    isRestDay={!trainingDays.includes(dayLog.day)}
+                    isRestDay={!effectiveTrainingDays.includes(dayLog.day)}
                     weekStart={weekStart}
                     onChange={(updated) => handleDayChange(idx, updated)}
                     repRanges={repRanges}
