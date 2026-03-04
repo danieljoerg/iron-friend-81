@@ -305,13 +305,14 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
     }
   }
 
-  // Get days_done from week record (cast to any since column may not be in generated types yet)
+  // Get days_done and training_days from week record
   const { data: weekMeta } = await supabase
     .from("workout_weeks")
     .select("*")
     .eq("id", weekRow.id)
     .single();
   const daysDone: string[] = ((weekMeta as any)?.days_done as string[]) || [];
+  const weekTrainingDays: string[] | null = (weekMeta as any)?.training_days ?? null;
 
   // Build the WeekLog structure
   const days: DayLog[] = FULL_DAYS.map((day) => {
@@ -324,7 +325,7 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
     return { day, exercises: dayExercises, done: daysDone.includes(day) };
   });
 
-  return { weekStart, days };
+  return { weekStart, days, trainingDays: weekTrainingDays };
 }
 
 export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
