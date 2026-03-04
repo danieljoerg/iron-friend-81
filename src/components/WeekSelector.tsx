@@ -1,10 +1,13 @@
-import { ChevronLeft, ChevronRight, CalendarIcon, Repeat, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarIcon, Repeat, Plus, Trash2, CalendarDays, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
+
+const SHORT_DAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const DAY_KEYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 interface WeekSelectorProps {
   weekStart: string;
@@ -15,11 +18,16 @@ interface WeekSelectorProps {
   mesocycle: Mesocycle | null;
   onCreateMesocycle: (durationWeeks: number) => void;
   onDeleteMesocycle: () => void;
+  trainingDays: string[];
+  hasWeekOverride: boolean;
+  onToggleDay: (day: string) => void;
+  onResetDays: () => void;
 }
 
-export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDateSelect, mesocycle, onCreateMesocycle, onDeleteMesocycle }: WeekSelectorProps) {
+export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDateSelect, mesocycle, onCreateMesocycle, onDeleteMesocycle, trainingDays, hasWeekOverride, onToggleDay, onResetDays }: WeekSelectorProps) {
   const [calOpen, setCalOpen] = useState(false);
   const [mesoOpen, setMesoOpen] = useState(false);
+  const [daysOpen, setDaysOpen] = useState(false);
   const [duration, setDuration] = useState(6);
   const start = new Date(weekStart + "T00:00:00");
   const end = new Date(start);
