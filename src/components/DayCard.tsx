@@ -2,7 +2,7 @@ import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, 
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
-import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -67,8 +67,9 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor)
   );
 
   const exerciseIds = useMemo(() => dayLog.exercises.map((_, i) => `ex-${i}`), [dayLog.exercises]);
@@ -234,7 +235,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
             {(dragHandleProps) => (<>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1 min-w-0">
-                <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing touch-none opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity shrink-0">
+                <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity shrink-0" style={{ touchAction: 'none' }}>
                   <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
                 </div>
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
