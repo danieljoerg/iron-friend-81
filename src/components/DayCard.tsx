@@ -209,10 +209,12 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
       {expanded && <div className="mt-3">
 
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={exerciseIds} strategy={verticalListSortingStrategy}>
       {dayLog.exercises.map((ex, exIdx) => {
         const range = repRanges?.[ex.exercise];
         return (
-          <div key={exIdx} className="mb-3 last:mb-0">
+          <SortableExerciseWrapper key={exerciseIds[exIdx]} id={exerciseIds[exIdx]} disabled={dayDone}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
