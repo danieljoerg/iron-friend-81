@@ -231,7 +231,8 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
       {dayLog.exercises.map((ex, exIdx) => {
         const range = repRanges?.[ex.exercise];
         return (
-          <SortableExerciseWrapper key={exerciseIds[exIdx]} id={exerciseIds[exIdx]} disabled={dayDone}>
+          <div key={exerciseIds[exIdx]}>
+          <SortableExerciseWrapper id={exerciseIds[exIdx]} disabled={dayDone}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
@@ -521,6 +522,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
               </button>
             </div>
           )}
+          </div>
         );
       })}
       </SortableContext>
