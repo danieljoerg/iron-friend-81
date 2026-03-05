@@ -291,6 +291,42 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
               </div>
             </div>
 
+            {swappingIdx === exIdx && (
+              <div className="mb-2 bg-secondary rounded-lg p-2">
+                <input
+                  type="text"
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                  placeholder="Übung suchen..."
+                  autoFocus
+                  className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary mb-2"
+                />
+                <div className="max-h-36 overflow-y-auto">
+                  {EXERCISES.filter((e) => e.toLowerCase().includes(swapSearch.toLowerCase())).map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        const exercises = [...dayLog.exercises];
+                        exercises[exIdx] = { ...exercises[exIdx], exercise: name };
+                        onChange({ ...dayLog, exercises });
+                        setSwappingIdx(null);
+                        setSwapSearch("");
+                      }}
+                      className={`block w-full text-left text-xs py-1.5 px-2 rounded hover:bg-border transition-colors ${name === ex.exercise ? 'text-primary font-semibold' : 'text-foreground/80'}`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setSwappingIdx(null); setSwapSearch(""); }}
+                  className="mt-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  cancel
+                </button>
+              </div>
+            )}
+
             {editingRange === ex.exercise && (
               <div className="flex items-center gap-1.5 mb-2 bg-secondary rounded-lg p-2">
                 <span className="text-[10px] font-mono text-muted-foreground">Reps:</span>
