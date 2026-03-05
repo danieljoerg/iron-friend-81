@@ -502,6 +502,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
             >
               + set
             </button>
+          </>)}
           </SortableExerciseWrapper>
           {/* Superset connector between exercises */}
           {exIdx < dayLog.exercises.length - 1 && (
