@@ -64,6 +64,8 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const [videoOverlay, setVideoOverlay] = useState<string | null>(null);
   const [editingYoutube, setEditingYoutube] = useState<string | null>(null);
   const [youtubeInput, setYoutubeInput] = useState("");
+  const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
