@@ -36,6 +36,23 @@ function getYoutubeEmbedUrl(url: string): string | null {
   }
 }
 
+function SortableExerciseWrapper({ id, disabled, children }: { id: string; disabled: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="mb-3 last:mb-0 relative group/sortable">
+      <div {...attributes} {...listeners} className="absolute left-0 top-0 bottom-0 w-5 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover/sortable:opacity-100 transition-opacity z-10" style={{ marginLeft: '-0.25rem' }}>
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded, isDeloadWeek }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
