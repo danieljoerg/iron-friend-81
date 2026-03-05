@@ -235,11 +235,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
           <SortableExerciseWrapper id={exerciseIds[exIdx]} disabled={dayDone}>
             {(dragHandleProps) => (<>
             <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1 min-w-0">
-                <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity shrink-0" style={{ touchAction: 'none' }}>
-                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity shrink-0 -mr-0.5" style={{ touchAction: 'none' }}>
+                  <GripVertical className="w-3 h-3 text-muted-foreground" />
                 </div>
-                <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
+                <span className="text-[10px] font-mono text-muted-foreground shrink-0 min-w-[1rem] text-right">{exIdx + 1}.</span>
                 <button
                   onClick={() => { setSwappingIdx(swappingIdx === exIdx ? null : exIdx); setSwapSearch(""); }}
                   className="text-xs font-medium text-foreground/80 truncate hover:text-primary transition-colors text-left"
