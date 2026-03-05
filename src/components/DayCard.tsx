@@ -500,6 +500,27 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
               + set
             </button>
           </SortableExerciseWrapper>
+          {/* Superset connector between exercises */}
+          {exIdx < dayLog.exercises.length - 1 && (
+            <div className="flex items-center justify-center -my-1 relative z-20">
+              <button
+                onClick={() => {
+                  const exercises = [...dayLog.exercises];
+                  exercises[exIdx] = { ...exercises[exIdx], supersetWithNext: !exercises[exIdx].supersetWithNext };
+                  onChange({ ...dayLog, exercises });
+                }}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono transition-all ${
+                  ex.supersetWithNext
+                    ? 'bg-accent text-accent-foreground border border-accent-foreground/20 shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent'
+                }`}
+                title={ex.supersetWithNext ? "Superset entfernen" : "Superset markieren"}
+              >
+                <Zap className="w-2.5 h-2.5" />
+                {ex.supersetWithNext ? 'Superset' : 'SS'}
+              </button>
+            </div>
+          )}
         );
       })}
       </SortableContext>
