@@ -140,9 +140,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
     onChange({ ...dayLog, exercises });
   };
 
-  const usedExercises = dayLog.exercises.map((e) => e.exercise);
-  const availableExercises = EXERCISES.filter((e) => !usedExercises.includes(e));
-  const filteredExercises = availableExercises.filter((e) =>
+  const filteredExercises = EXERCISES.filter((e) =>
     e.toLowerCase().includes(search.toLowerCase())
   );
 
