@@ -235,7 +235,13 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
-                <span className="text-xs font-medium text-foreground/80 truncate">{ex.exercise}</span>
+                <button
+                  onClick={() => { setSwappingIdx(swappingIdx === exIdx ? null : exIdx); setSwapSearch(""); }}
+                  className="text-xs font-medium text-foreground/80 truncate hover:text-primary transition-colors text-left"
+                  title="Übung wechseln"
+                >
+                  {ex.exercise}
+                </button>
                 {range && (
                   <span className="text-[9px] font-mono text-muted-foreground shrink-0">
                     {range.min_reps}–{range.max_reps}r
