@@ -36,7 +36,7 @@ function getYoutubeEmbedUrl(url: string): string | null {
   }
 }
 
-function SortableExerciseWrapper({ id, disabled, children }: { id: string; disabled: boolean; children: React.ReactNode }) {
+function SortableExerciseWrapper({ id, disabled, children }: { id: string; disabled: boolean; children: (dragHandleProps: React.HTMLAttributes<HTMLDivElement>) => React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -45,7 +45,7 @@ function SortableExerciseWrapper({ id, disabled, children }: { id: string; disab
   };
   return (
     <div ref={setNodeRef} style={style} className="mb-3 last:mb-0 group/sortable">
-      {children}
+      {children({ ...attributes, ...listeners } as React.HTMLAttributes<HTMLDivElement>)}
     </div>
   );
 }
@@ -231,9 +231,12 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
         return (
           <div key={exerciseIds[exIdx]} className={isInSuperset ? 'border-l-2 border-accent pl-2 ml-1' : ''}>
           <SortableExerciseWrapper id={exerciseIds[exIdx]} disabled={dayDone}>
+            {(dragHandleProps) => (<>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1 min-w-0">
-                <DragHandle id={exerciseIds[exIdx]} disabled={dayDone} />
+                <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing touch-none opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity shrink-0">
+                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
                 <button
                   onClick={() => { setSwappingIdx(swappingIdx === exIdx ? null : exIdx); setSwapSearch(""); }}
