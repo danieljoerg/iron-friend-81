@@ -44,10 +44,7 @@ function SortableExerciseWrapper({ id, disabled, children }: { id: string; disab
     opacity: isDragging ? 0.5 : 1,
   };
   return (
-    <div ref={setNodeRef} style={style} className="mb-3 last:mb-0 relative group/sortable">
-      <div {...attributes} {...listeners} className="absolute left-0 top-0 bottom-0 w-5 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity z-10" style={{ marginLeft: '-0.25rem' }}>
-        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-      </div>
+    <div ref={setNodeRef} style={style} className="mb-3 last:mb-0 group/sortable">
       {children}
     </div>
   );
@@ -235,7 +232,8 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
           <div key={exerciseIds[exIdx]} className={isInSuperset ? 'border-l-2 border-accent pl-2 ml-1' : ''}>
           <SortableExerciseWrapper id={exerciseIds[exIdx]} disabled={dayDone}>
             <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5 min-w-0">
+              <div className="flex items-center gap-1 min-w-0">
+                <DragHandle id={exerciseIds[exIdx]} disabled={dayDone} />
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
                 <button
                   onClick={() => { setSwappingIdx(swappingIdx === exIdx ? null : exIdx); setSwapSearch(""); }}
