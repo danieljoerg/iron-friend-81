@@ -1,7 +1,10 @@
-import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface DayCardProps {
   dayLog: DayLog;
@@ -33,6 +36,23 @@ function getYoutubeEmbedUrl(url: string): string | null {
   }
 }
 
+function SortableExerciseWrapper({ id, disabled, children }: { id: string; disabled: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="mb-3 last:mb-0 relative group/sortable">
+      <div {...attributes} {...listeners} className="absolute left-0 top-0 bottom-0 w-5 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity z-10" style={{ marginLeft: '-0.25rem' }}>
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded, isDeloadWeek }: DayCardProps) {
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
@@ -46,6 +66,25 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const [youtubeInput, setYoutubeInput] = useState("");
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  const exerciseIds = useMemo(() => dayLog.exercises.map((_, i) => `ex-${i}`), [dayLog.exercises]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = exerciseIds.indexOf(active.id as string);
+    const newIndex = exerciseIds.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newExercises = [...dayLog.exercises];
+    const [moved] = newExercises.splice(oldIndex, 1);
+    newExercises.splice(newIndex, 0, moved);
+    onChange({ ...dayLog, exercises: newExercises });
+  };
 
   const addExercise = (exercise: string) => {
     const updated: DayLog = {
@@ -187,10 +226,12 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
       {expanded && <div className="mt-3">
 
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={exerciseIds} strategy={verticalListSortingStrategy}>
       {dayLog.exercises.map((ex, exIdx) => {
         const range = repRanges?.[ex.exercise];
         return (
-          <div key={exIdx} className="mb-3 last:mb-0">
+          <SortableExerciseWrapper key={exerciseIds[exIdx]} id={exerciseIds[exIdx]} disabled={dayDone}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
@@ -416,9 +457,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
             >
               + set
             </button>
-          </div>
+          </SortableExerciseWrapper>
         );
       })}
+      </SortableContext>
+      </DndContext>
 
       {adding ? (
         <div className="mt-2 bg-secondary rounded-lg p-2">
