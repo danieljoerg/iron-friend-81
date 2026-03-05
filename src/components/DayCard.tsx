@@ -45,7 +45,7 @@ function SortableExerciseWrapper({ id, disabled, children }: { id: string; disab
   };
   return (
     <div ref={setNodeRef} style={style} className="mb-3 last:mb-0 relative group/sortable">
-      <div {...attributes} {...listeners} className="absolute left-0 top-0 bottom-0 w-5 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover/sortable:opacity-100 transition-opacity z-10" style={{ marginLeft: '-0.25rem' }}>
+      <div {...attributes} {...listeners} className="absolute left-0 top-0 bottom-0 w-5 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none opacity-40 sm:opacity-0 sm:group-hover/sortable:opacity-100 transition-opacity z-10" style={{ marginLeft: '-0.25rem' }}>
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
       {children}
