@@ -64,6 +64,8 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const [videoOverlay, setVideoOverlay] = useState<string | null>(null);
   const [editingYoutube, setEditingYoutube] = useState<string | null>(null);
   const [youtubeInput, setYoutubeInput] = useState("");
+  const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -233,7 +235,13 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
-                <span className="text-xs font-medium text-foreground/80 truncate">{ex.exercise}</span>
+                <button
+                  onClick={() => { setSwappingIdx(swappingIdx === exIdx ? null : exIdx); setSwapSearch(""); }}
+                  className="text-xs font-medium text-foreground/80 truncate hover:text-primary transition-colors text-left"
+                  title="Übung wechseln"
+                >
+                  {ex.exercise}
+                </button>
                 {range && (
                   <span className="text-[9px] font-mono text-muted-foreground shrink-0">
                     {range.min_reps}–{range.max_reps}r
@@ -282,6 +290,42 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                 </button>
               </div>
             </div>
+
+            {swappingIdx === exIdx && (
+              <div className="mb-2 bg-secondary rounded-lg p-2">
+                <input
+                  type="text"
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                  placeholder="Übung suchen..."
+                  autoFocus
+                  className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary mb-2"
+                />
+                <div className="max-h-36 overflow-y-auto">
+                  {EXERCISES.filter((e) => e.toLowerCase().includes(swapSearch.toLowerCase())).map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        const exercises = [...dayLog.exercises];
+                        exercises[exIdx] = { ...exercises[exIdx], exercise: name };
+                        onChange({ ...dayLog, exercises });
+                        setSwappingIdx(null);
+                        setSwapSearch("");
+                      }}
+                      className={`block w-full text-left text-xs py-1.5 px-2 rounded hover:bg-border transition-colors ${name === ex.exercise ? 'text-primary font-semibold' : 'text-foreground/80'}`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setSwappingIdx(null); setSwapSearch(""); }}
+                  className="mt-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  cancel
+                </button>
+              </div>
+            )}
 
             {editingRange === ex.exercise && (
               <div className="flex items-center gap-1.5 mb-2 bg-secondary rounded-lg p-2">
