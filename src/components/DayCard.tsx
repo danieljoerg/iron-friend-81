@@ -193,6 +193,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
           <div key={exIdx} className="mb-3 last:mb-0">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
                 <span className="text-xs font-medium text-foreground/80 truncate">{ex.exercise}</span>
                 {range && (
                   <span className="text-[9px] font-mono text-muted-foreground shrink-0">
