@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
