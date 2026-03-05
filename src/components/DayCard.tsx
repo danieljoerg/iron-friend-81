@@ -230,8 +230,9 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
       <SortableContext items={exerciseIds} strategy={verticalListSortingStrategy}>
       {dayLog.exercises.map((ex, exIdx) => {
         const range = repRanges?.[ex.exercise];
+        const isInSuperset = ex.supersetWithNext || (exIdx > 0 && dayLog.exercises[exIdx - 1]?.supersetWithNext);
         return (
-          <div key={exerciseIds[exIdx]}>
+          <div key={exerciseIds[exIdx]} className={isInSuperset ? 'border-l-2 border-accent pl-2 ml-1' : ''}>
           <SortableExerciseWrapper id={exerciseIds[exIdx]} disabled={dayDone}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
