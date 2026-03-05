@@ -50,6 +50,25 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  const exerciseIds = useMemo(() => dayLog.exercises.map((_, i) => `ex-${i}`), [dayLog.exercises]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = exerciseIds.indexOf(active.id as string);
+    const newIndex = exerciseIds.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newExercises = [...dayLog.exercises];
+    const [moved] = newExercises.splice(oldIndex, 1);
+    newExercises.splice(newIndex, 0, moved);
+    onChange({ ...dayLog, exercises: newExercises });
+  };
+
   const addExercise = (exercise: string) => {
     const updated: DayLog = {
       ...dayLog,
