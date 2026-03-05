@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
@@ -230,8 +230,10 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
       <SortableContext items={exerciseIds} strategy={verticalListSortingStrategy}>
       {dayLog.exercises.map((ex, exIdx) => {
         const range = repRanges?.[ex.exercise];
+        const isInSuperset = ex.supersetWithNext || (exIdx > 0 && dayLog.exercises[exIdx - 1]?.supersetWithNext);
         return (
-          <SortableExerciseWrapper key={exerciseIds[exIdx]} id={exerciseIds[exIdx]} disabled={dayDone}>
+          <div key={exerciseIds[exIdx]} className={isInSuperset ? 'border-l-2 border-accent pl-2 ml-1' : ''}>
+          <SortableExerciseWrapper id={exerciseIds[exIdx]} disabled={dayDone}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">{exIdx + 1}.</span>
@@ -500,6 +502,28 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
               + set
             </button>
           </SortableExerciseWrapper>
+          {/* Superset connector between exercises */}
+          {exIdx < dayLog.exercises.length - 1 && (
+            <div className="flex items-center justify-center -my-1 relative z-20">
+              <button
+                onClick={() => {
+                  const exercises = [...dayLog.exercises];
+                  exercises[exIdx] = { ...exercises[exIdx], supersetWithNext: !exercises[exIdx].supersetWithNext };
+                  onChange({ ...dayLog, exercises });
+                }}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono transition-all ${
+                  ex.supersetWithNext
+                    ? 'bg-accent text-accent-foreground border border-accent-foreground/20 shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent'
+                }`}
+                title={ex.supersetWithNext ? "Superset entfernen" : "Superset markieren"}
+              >
+                <Zap className="w-2.5 h-2.5" />
+                {ex.supersetWithNext ? 'Superset' : 'SS'}
+              </button>
+            </div>
+          )}
+          </div>
         );
       })}
       </SortableContext>
