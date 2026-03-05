@@ -440,9 +440,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
             >
               + set
             </button>
-          </div>
+          </SortableExerciseWrapper>
         );
       })}
+      </SortableContext>
+      </DndContext>
 
       {adding ? (
         <div className="mt-2 bg-secondary rounded-lg p-2">
