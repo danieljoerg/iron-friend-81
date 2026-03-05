@@ -357,6 +357,7 @@ export type ExerciseLog = {
   exercise: string;
   sets: WorkoutSet[];
   supersetWithNext?: boolean;
+  note?: string;
 };
 
 export type DayLog = {

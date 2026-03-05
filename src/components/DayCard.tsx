@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap, MessageSquare } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
@@ -63,6 +63,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const [youtubeInput, setYoutubeInput] = useState("");
   const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
+  const [editingNote, setEditingNote] = useState<number | null>(null);
 
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
@@ -280,6 +281,13 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                   <Link className="w-3 h-3" />
                 </button>
                 <button
+                  onClick={() => setEditingNote(editingNote === exIdx ? null : exIdx)}
+                  className={`transition-colors p-0.5 ${ex.note ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                  title="Kommentar"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                </button>
+                <button
                   onClick={() => setEditingRange(editingRange === ex.exercise ? null : ex.exercise)}
                   className="text-muted-foreground hover:text-primary transition-colors p-0.5"
                   title="Set rep range"
@@ -365,6 +373,35 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                 >
                   done
                 </button>
+              </div>
+            )}
+
+            {/* Note display / edit */}
+            {ex.note && editingNote !== exIdx && (
+              <div className="mb-1.5 px-2">
+                <span className="text-[10px] font-mono text-muted-foreground italic">💬 {ex.note}</span>
+              </div>
+            )}
+            {editingNote === exIdx && (
+              <div className="flex items-center gap-1.5 mb-2 bg-secondary rounded-lg p-2">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  defaultValue={ex.note || ""}
+                  placeholder="z.B. Superset mit Curls, langsam negativ..."
+                  autoFocus
+                  className="flex-1 min-w-0 bg-background border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  onBlur={(e) => {
+                    const note = e.target.value.trim() || undefined;
+                    const exercises = [...dayLog.exercises];
+                    exercises[exIdx] = { ...exercises[exIdx], note };
+                    onChange({ ...dayLog, exercises });
+                    setEditingNote(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  }}
+                />
               </div>
             )}
 
