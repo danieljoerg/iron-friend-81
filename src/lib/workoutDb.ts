@@ -227,9 +227,15 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
 
   const result: Record<string, ExerciseLog[]> = {};
   for (const day of FULL_DAYS) {
-    result[day] = exercises
-      .filter((e) => e.day === day)
-      .map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
+    const dayExs = exercises.filter((e) => e.day === day);
+    // Deduplicate by sort_order
+    const seen = new Set<number>();
+    const unique = dayExs.filter((e) => {
+      if (seen.has(e.sort_order)) return false;
+      seen.add(e.sort_order);
+      return true;
+    });
+    result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
   }
   return result;
 }
