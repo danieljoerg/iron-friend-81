@@ -30,7 +30,9 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
-  const skipNextFetchRef = useRef(false);
+  // Version counter: incremented by handleCompleteWeek to signal "data already loaded"
+  const dataVersionRef = useRef(0);
+  const lastLoadedVersionRef = useRef(0);
 
   useEffect(() => {
     if (!user) return;
@@ -45,15 +47,16 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Skip fetch if completeWeek already set the state directly
-    if (skipNextFetchRef.current) {
-      skipNextFetchRef.current = false;
-      console.log("[Index] Skipping fetch for", weekStart, "— data already set by completeWeek");
+    // If handleCompleteWeek already loaded the data for this weekStart, skip
+    if (dataVersionRef.current > lastLoadedVersionRef.current && week.weekStart === weekStart) {
+      lastLoadedVersionRef.current = dataVersionRef.current;
+      console.log("[Index] Skipping fetch for", weekStart, "— data already set by completeWeek (v" + dataVersionRef.current + ")");
       return;
     }
 
     console.log("[Index] Fetching week data for", weekStart);
     let cancelled = false;
+    const fetchVersion = dataVersionRef.current;
     setLoading(true);
     Promise.all([
       getOrCreateWeekDb(weekStart, user.id),
@@ -61,7 +64,10 @@ const Index = () => {
       getPreviousWeekData(weekStart, user.id),
       getActiveMesocycle(user.id),
     ]).then(([w, rr, prev, meso]) => {
-      if (cancelled) return;
+      if (cancelled || dataVersionRef.current > fetchVersion) {
+        console.log("[Index] Discarding stale fetch for", weekStart);
+        return;
+      }
       console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
       setWeek(w);
       setRepRanges(rr);
@@ -147,8 +153,8 @@ const Index = () => {
       getActiveMesocycle(user.id),
     ]);
 
-    // Set skip flag BEFORE setting weekStart to prevent useEffect from overwriting
-    skipNextFetchRef.current = true;
+    // Increment version so the useEffect knows not to fetch
+    dataVersionRef.current += 1;
 
     // Set ALL state directly — no useEffect needed
     setWeek(nextWeek);
