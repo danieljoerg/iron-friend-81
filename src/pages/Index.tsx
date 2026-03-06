@@ -44,11 +44,24 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) return;
-    if (skipNextFetchRef.current) {
-      console.log("[Index] Skipping fetch for", weekStart, "- data already set from completeWeek");
-      skipNextFetchRef.current = false;
+
+    // If we have pending data from completeWeek, use it directly instead of fetching
+    const pending = pendingWeekDataRef.current;
+    if (pending && pending.week.weekStart === weekStart) {
+      console.log("[Index] Using pending data for", weekStart, "- exercises per day:", pending.week.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+      pendingWeekDataRef.current = null;
+      setWeek(pending.week);
+      setPrevWeekData(pending.prevData);
+      setWeekTrainingDays(pending.trainingDays);
+      setLoading(false);
+      // Still load rep ranges and mesocycle
+      Promise.all([getRepRangesDb(user.id), getActiveMesocycle(user.id)]).then(([rr, meso]) => {
+        setRepRanges(rr);
+        setMesocycle(meso);
+      });
       return;
     }
+
     console.log("[Index] Fetching week data for", weekStart);
     setLoading(true);
     Promise.all([
