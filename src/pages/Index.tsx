@@ -275,7 +275,7 @@ const Index = () => {
             onPrev={() => navigateWeek(-1)}
             onNext={() => navigateWeek(1)}
             onToday={goToToday}
-            onDateSelect={(date) => setWeekStart(getWeekStartForDate(date))}
+            onDateSelect={(date) => loadWeekData(getWeekStartForDate(date))}
             mesocycle={mesocycle}
             onCreateMesocycle={handleCreateMesocycle}
             onDeleteMesocycle={handleDeleteMesocycle}
