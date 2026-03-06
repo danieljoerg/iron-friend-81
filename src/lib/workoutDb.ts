@@ -207,20 +207,22 @@ export async function shouldDeload(userId: string): Promise<boolean> {
 }
 
 export async function getPreviousWeekData(weekStart: string, userId: string): Promise<Record<string, ExerciseLog[]>> {
+  // Find the most recent previous week that actually has exercises
   const { data: prevWeeks } = await supabase
     .from("workout_weeks")
-    .select("id, week_start")
+    .select("id, week_start, workout_exercises(id)")
     .eq("user_id", userId)
     .lt("week_start", weekStart)
     .order("week_start", { ascending: false })
-    .limit(1);
+    .limit(10);
 
-  if (!prevWeeks || prevWeeks.length === 0) return {};
+  const prevWeek = prevWeeks?.find((w: any) => w.workout_exercises && w.workout_exercises.length > 0);
+  if (!prevWeek) return {};
 
   const { data: exercises } = await supabase
     .from("workout_exercises")
     .select("day, exercise, sets, sort_order")
-    .eq("week_id", prevWeeks[0].id)
+    .eq("week_id", prevWeek.id)
     .order("sort_order");
 
   if (!exercises) return {};
@@ -228,11 +230,11 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
   const result: Record<string, ExerciseLog[]> = {};
   for (const day of FULL_DAYS) {
     const dayExs = exercises.filter((e) => e.day === day);
-    // Deduplicate by sort_order
-    const seen = new Set<number>();
+    // Deduplicate by exercise name
+    const seen = new Set<string>();
     const unique = dayExs.filter((e) => {
-      if (seen.has(e.sort_order)) return false;
-      seen.add(e.sort_order);
+      if (seen.has(e.exercise)) return false;
+      seen.add(e.exercise);
       return true;
     });
     result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
