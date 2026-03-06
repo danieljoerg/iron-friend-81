@@ -111,9 +111,17 @@ const Index = () => {
       })),
     };
     setWeek(updatedWeek);
-    if (user) await saveWeekDb(updatedWeek, user.id);
-    // Navigate to next week
-    navigateWeek(1);
+    if (user) {
+      await saveWeekDb(updatedWeek, user.id);
+    }
+    // Navigate to next week after save is complete
+    const d = new Date(weekStart + "T00:00:00");
+    d.setDate(d.getDate() + 7);
+    const nextWeekStart = formatDateString(d);
+    // Use setTimeout to ensure React processes the state update from setWeek first
+    setTimeout(() => {
+      setWeekStart(nextWeekStart);
+    }, 0);
   };
 
   const handleToggleWeekDay = (day: string) => {
