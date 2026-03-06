@@ -258,7 +258,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .eq("week_start", weekStart)
     .maybeSingle();
 
-  
+
 
   if (!weekRow) {
     const { data: newWeek } = await supabase
