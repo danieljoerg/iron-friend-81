@@ -30,6 +30,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const skipNextFetchRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
