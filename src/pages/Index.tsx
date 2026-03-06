@@ -98,8 +98,9 @@ const Index = () => {
   const hasAnyExercises = week.days.some(d => d.exercises.length > 0);
 
   const handleCompleteWeek = async () => {
+    if (!user) return;
     // Mark all days as done
-    const updatedWeek = {
+    const completedWeek: WeekLog = {
       ...week,
       days: week.days.map(d => ({
         ...d,
@@ -110,18 +111,18 @@ const Index = () => {
         })),
       })),
     };
-    setWeek(updatedWeek);
-    if (user) {
-      await saveWeekDb(updatedWeek, user.id);
-    }
-    // Navigate to next week after save is complete
-    const d = new Date(weekStart + "T00:00:00");
-    d.setDate(d.getDate() + 7);
-    const nextWeekStart = formatDateString(d);
-    // Use setTimeout to ensure React processes the state update from setWeek first
-    setTimeout(() => {
-      setWeekStart(nextWeekStart);
-    }, 0);
+    setWeek(completedWeek);
+
+    // Save completed week + create next week with copied exercises in one go
+    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+
+    // Also load prev week data for progression targets (= the just-completed week)
+    const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
+
+    // Switch view to next week
+    setWeek(nextWeek);
+    setPrevWeekData(prevData);
+    setWeekStart(nextWeek.weekStart);
   };
 
   const handleToggleWeekDay = (day: string) => {
