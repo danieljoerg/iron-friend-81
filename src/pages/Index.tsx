@@ -8,7 +8,7 @@ import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
 import { getWeekStart, formatDateString, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
-import { getOrCreateWeekDb, saveWeekDb, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, getActiveMesocycle, createMesocycle, deleteMesocycle, getMesocycleWeekInfo, computeDeloadTargets, type RepRange, type ExerciseTarget, type Mesocycle } from "@/lib/workoutDb";
+import { getOrCreateWeekDb, saveWeekDb, completeWeekAndPrepareNext, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, getActiveMesocycle, createMesocycle, deleteMesocycle, getMesocycleWeekInfo, computeDeloadTargets, type RepRange, type ExerciseTarget, type Mesocycle } from "@/lib/workoutDb";
 import MesocycleBanner from "@/components/MesocycleBanner";
 import type { ExerciseLog } from "@/lib/workoutData";
 import { useAuth } from "@/hooks/useAuth";
