@@ -113,9 +113,7 @@ const Index = () => {
     setWeek(updatedWeek);
     if (user) await saveWeekDb(updatedWeek, user.id);
     // Navigate to next week
-    const d = new Date(weekStart + "T00:00:00");
-    d.setDate(d.getDate() + 7);
-    setWeekStart(formatDateString(d));
+    navigateWeek(1);
   };
 
   const handleToggleWeekDay = (day: string) => {
