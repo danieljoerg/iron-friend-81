@@ -64,7 +64,10 @@ const Index = () => {
       getPreviousWeekData(weekStart, user.id),
       getActiveMesocycle(user.id),
     ]).then(([w, rr, prev, meso]) => {
-      if (cancelled) return;
+      if (cancelled || dataVersionRef.current > fetchVersion) {
+        console.log("[Index] Discarding stale fetch for", weekStart);
+        return;
+      }
       console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
       setWeek(w);
       setRepRanges(rr);
