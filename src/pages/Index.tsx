@@ -97,7 +97,7 @@ const Index = () => {
   const allDaysDone = week.days.every(d => d.done || (!effectiveTrainingDays.includes(d.day) && d.exercises.length === 0));
   const hasAnyExercises = week.days.some(d => d.exercises.length > 0);
 
-  const handleCompleteWeek = () => {
+  const handleCompleteWeek = async () => {
     // Mark all days as done
     const updatedWeek = {
       ...week,
@@ -111,9 +111,11 @@ const Index = () => {
       })),
     };
     setWeek(updatedWeek);
-    if (user) saveWeekDb(updatedWeek, user.id);
+    if (user) await saveWeekDb(updatedWeek, user.id);
     // Navigate to next week
-    setTimeout(() => navigateWeek(1), 300);
+    const d = new Date(weekStart + "T00:00:00");
+    d.setDate(d.getDate() + 7);
+    setWeekStart(formatDateString(d));
   };
 
   const handleToggleWeekDay = (day: string) => {
