@@ -107,6 +107,7 @@ const Index = () => {
 
   const handleCompleteWeek = async () => {
     if (!user) return;
+    
     // Mark all days as done
     const completedWeek: WeekLog = {
       ...week,
@@ -119,28 +120,31 @@ const Index = () => {
         })),
       })),
     };
-    setWeek(completedWeek);
 
     console.log("[handleCompleteWeek] Completing week", completedWeek.weekStart,
       "exercises:", completedWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
 
-    // Save completed week + create next week with copied exercises in one go
+    // Optimistic update: show completed state
+    setWeek(completedWeek);
+
+    // Save completed week + create next week with copied exercises
     const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
 
     console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
       "exercises:", nextWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
 
-    // Also load prev week data for progression targets (= the just-completed week)
+    // Load prev week data for progression targets
     const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
 
-    // CRITICAL: Set skip flag BEFORE setting weekStart to prevent useEffect from overwriting
+    // CRITICAL: Set skip flag BEFORE any state updates to prevent useEffect overwrite
     skipNextFetchRef.current = true;
 
-    // Set all state at once - React batches these
+    // Update all state - weekStart LAST to ensure skip flag is read by effect
     setWeek(nextWeek);
     setPrevWeekData(prevData);
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
     setLoading(false);
+    // Use functional update to ensure this triggers the effect AFTER other states are set
     setWeekStart(nextWeek.weekStart);
   };
 
