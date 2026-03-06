@@ -44,9 +44,11 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     if (skipNextFetchRef.current) {
+      console.log("[Index] Skipping fetch for", weekStart, "- data already set from completeWeek");
       skipNextFetchRef.current = false;
       return;
     }
+    console.log("[Index] Fetching week data for", weekStart);
     setLoading(true);
     Promise.all([
       getOrCreateWeekDb(weekStart, user.id),
@@ -54,6 +56,7 @@ const Index = () => {
       getPreviousWeekData(weekStart, user.id),
       getActiveMesocycle(user.id),
     ]).then(([w, rr, prev, meso]) => {
+      console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
       setWeek(w);
       setRepRanges(rr);
       setPrevWeekData(prev);
@@ -104,6 +107,7 @@ const Index = () => {
 
   const handleCompleteWeek = async () => {
     if (!user) return;
+    
     // Mark all days as done
     const completedWeek: WeekLog = {
       ...week,
@@ -116,22 +120,31 @@ const Index = () => {
         })),
       })),
     };
+
+    console.log("[handleCompleteWeek] Completing week", completedWeek.weekStart,
+      "exercises:", completedWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+
+    // Optimistic update: show completed state
     setWeek(completedWeek);
 
-    // Save completed week + create next week with copied exercises in one go
+    // Save completed week + create next week with copied exercises
     const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
 
-    // Also load prev week data for progression targets (= the just-completed week)
+    console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
+      "exercises:", nextWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+
+    // Load prev week data for progression targets
     const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
 
-    // Skip the useEffect re-fetch since we already have the data
+    // CRITICAL: Set skip flag BEFORE any state updates to prevent useEffect overwrite
     skipNextFetchRef.current = true;
 
-    // Switch view to next week
+    // Update all state - weekStart LAST to ensure skip flag is read by effect
     setWeek(nextWeek);
     setPrevWeekData(prevData);
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
     setLoading(false);
+    // Use functional update to ensure this triggers the effect AFTER other states are set
     setWeekStart(nextWeek.weekStart);
   };
 
