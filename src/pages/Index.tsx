@@ -285,16 +285,11 @@ const Index = () => {
                 {/* Complete Week Button */}
                 {hasAnyExercises && (
                   <button
-                    onClick={handleCompleteWeek}
-                    disabled={allDaysDone}
-                    className={`mt-4 w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all ${
-                      allDaysDone
-                        ? 'bg-primary/10 text-primary/40 cursor-not-allowed'
-                        : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                    }`}
+                    onClick={allDaysDone ? () => navigateWeek(1) : handleCompleteWeek}
+                    className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                   >
                     <CheckCheck className="w-4 h-4" />
-                    {allDaysDone ? 'Woche abgeschlossen ✓' : 'Woche abschließen → nächste Woche'}
+                    {allDaysDone ? 'Nächste Woche →' : 'Woche abschließen → nächste Woche'}
                   </button>
                 )}
               </>
