@@ -312,13 +312,18 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
         .order("week_start", { ascending: false })
         .limit(10);
 
-      console.log("[getOrCreateWeek] Previous week:", prevWeeks?.[0]?.week_start, prevWeeks?.[0]?.id);
+      // Find first previous week that actually has exercises
+      const prevWeekWithExercises = prevWeeks?.find((w: any) => 
+        w.workout_exercises && w.workout_exercises.length > 0
+      );
+      
+      console.log("[getOrCreateWeek] Previous week with exercises:", prevWeekWithExercises?.week_start, prevWeekWithExercises?.id);
 
-      if (prevWeeks && prevWeeks.length > 0) {
+      if (prevWeekWithExercises) {
         const { data: prevExercises } = await supabase
           .from("workout_exercises")
           .select("day, exercise, sets, sort_order")
-          .eq("week_id", prevWeeks[0].id)
+          .eq("week_id", prevWeekWithExercises.id)
           .order("sort_order");
 
         console.log("[getOrCreateWeek] Previous week exercises:", prevExercises?.length ?? 0);
