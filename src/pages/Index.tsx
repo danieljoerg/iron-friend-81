@@ -142,10 +142,10 @@ const Index = () => {
       getActiveMesocycle(user.id),
     ]);
 
-    // Increment version so the useEffect knows not to fetch
-    dataVersionRef.current += 1;
+    // Increment fetchId to cancel any in-flight fetches
+    fetchIdRef.current += 1;
 
-    // Set ALL state directly — no useEffect needed
+    // Set ALL state directly — no useEffect fetch needed
     setWeek(nextWeek);
     setPrevWeekData(prevData);
     setRepRanges(rr);
