@@ -121,16 +121,22 @@ const Index = () => {
     };
     setWeek(completedWeek);
 
+    console.log("[handleCompleteWeek] Completing week", completedWeek.weekStart,
+      "exercises:", completedWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+
     // Save completed week + create next week with copied exercises in one go
     const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+
+    console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
+      "exercises:", nextWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
 
     // Also load prev week data for progression targets (= the just-completed week)
     const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
 
-    // Skip the useEffect re-fetch since we already have the data
+    // CRITICAL: Set skip flag BEFORE setting weekStart to prevent useEffect from overwriting
     skipNextFetchRef.current = true;
 
-    // Switch view to next week
+    // Set all state at once - React batches these
     setWeek(nextWeek);
     setPrevWeekData(prevData);
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
