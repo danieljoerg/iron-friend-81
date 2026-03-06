@@ -259,41 +259,43 @@ const Index = () => {
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {week.days.map((dayLog, idx) => (
-                  <DayCard
-                    key={dayLog.day}
-                    dayLog={dayLog}
-                    isToday={isCurrentWeek && dayLog.day === todayName}
-                    isRestDay={!effectiveTrainingDays.includes(dayLog.day)}
-                    weekStart={weekStart}
-                    onChange={(updated) => handleDayChange(idx, updated)}
-                    repRanges={repRanges}
-                    onRepRangeChange={handleRepRangeChange}
-                    onYoutubeUrlChange={handleYoutubeUrlChange}
-                    prevDayExercises={prevWeekData[dayLog.day] || []}
-                    expanded={expandedDay === idx}
-                    onToggleExpanded={() => setExpandedDay(expandedDay === idx ? null : idx)}
-                    isDeloadWeek={mesoWeekInfo?.isDeload ?? false}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {week.days.map((dayLog, idx) => (
+                    <DayCard
+                      key={dayLog.day}
+                      dayLog={dayLog}
+                      isToday={isCurrentWeek && dayLog.day === todayName}
+                      isRestDay={!effectiveTrainingDays.includes(dayLog.day)}
+                      weekStart={weekStart}
+                      onChange={(updated) => handleDayChange(idx, updated)}
+                      repRanges={repRanges}
+                      onRepRangeChange={handleRepRangeChange}
+                      onYoutubeUrlChange={handleYoutubeUrlChange}
+                      prevDayExercises={prevWeekData[dayLog.day] || []}
+                      expanded={expandedDay === idx}
+                      onToggleExpanded={() => setExpandedDay(expandedDay === idx ? null : idx)}
+                      isDeloadWeek={mesoWeekInfo?.isDeload ?? false}
+                    />
+                  ))}
+                </div>
 
-              {/* Complete Week Button */}
-              {hasAnyExercises && (
-                <button
-                  onClick={handleCompleteWeek}
-                  disabled={allDaysDone}
-                  className={`mt-4 w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all ${
-                    allDaysDone
-                      ? 'bg-primary/10 text-primary/40 cursor-not-allowed'
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                  }`}
-                >
-                  <CheckCheck className="w-4 h-4" />
-                  {allDaysDone ? 'Woche abgeschlossen ✓' : 'Woche abschließen → nächste Woche'}
-                </button>
-              )}
+                {/* Complete Week Button */}
+                {hasAnyExercises && (
+                  <button
+                    onClick={handleCompleteWeek}
+                    disabled={allDaysDone}
+                    className={`mt-4 w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all ${
+                      allDaysDone
+                        ? 'bg-primary/10 text-primary/40 cursor-not-allowed'
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                    }`}
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    {allDaysDone ? 'Woche abgeschlossen ✓' : 'Woche abschließen → nächste Woche'}
+                  </button>
+                )}
+              </>
             )}
           </TabsContent>
 
