@@ -256,6 +256,8 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
 }
 
 async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promise<WeekLog> {
+  console.log("[getOrCreateWeek] START for", weekStart);
+  
   // Get or create week record
   let { data: weekRow } = await supabase
     .from("workout_weeks")
@@ -264,9 +266,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .eq("week_start", weekStart)
     .maybeSingle();
 
-
-
   if (!weekRow) {
+    console.log("[getOrCreateWeek] Creating new week row for", weekStart);
     const { data: newWeek } = await supabase
       .from("workout_weeks")
       .insert({ user_id: userId, week_start: weekStart })
@@ -276,15 +277,20 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
   }
 
   if (!weekRow) {
+    console.error("[getOrCreateWeek] Failed to get/create week row for", weekStart);
     return { weekStart, days: FULL_DAYS.map((day) => ({ day, exercises: [] })) };
   }
 
+  console.log("[getOrCreateWeek] Week row id:", weekRow.id);
+
   // Get exercises for this week
-  const { data: exercises } = await supabase
+  const { data: exercises, error: exErr } = await supabase
     .from("workout_exercises")
     .select("*")
     .eq("week_id", weekRow.id)
     .order("sort_order");
+
+  console.log("[getOrCreateWeek] Found", exercises?.length ?? 0, "exercises for week", weekStart, exErr ? `ERROR: ${exErr.message}` : "");
 
   // If week has no exercises, copy structure from most recent previous week
   if (!exercises || exercises.length === 0) {
@@ -293,6 +299,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
       .from("workout_exercises")
       .select("id", { count: "exact", head: true })
       .eq("week_id", weekRow.id);
+
+    console.log("[getOrCreateWeek] Double-check count:", count);
 
     if ((count ?? 0) === 0) {
       const { data: prevWeeks } = await supabase
@@ -303,6 +311,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
         .order("week_start", { ascending: false })
         .limit(1);
 
+      console.log("[getOrCreateWeek] Previous week:", prevWeeks?.[0]?.week_start, prevWeeks?.[0]?.id);
+
       if (prevWeeks && prevWeeks.length > 0) {
         const { data: prevExercises } = await supabase
           .from("workout_exercises")
@@ -310,17 +320,21 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
           .eq("week_id", prevWeeks[0].id)
           .order("sort_order");
 
+        console.log("[getOrCreateWeek] Previous week exercises:", prevExercises?.length ?? 0);
+
         if (prevExercises && prevExercises.length > 0) {
-          // Deduplicate prev exercises per day+sort_order
+          // Deduplicate prev exercises per day+exercise name
           const dedupedPrev: typeof prevExercises = [];
           const seenKeys = new Set<string>();
           for (const e of prevExercises) {
-            const key = `${e.day}:${e.sort_order}`;
+            const key = `${e.day}:${e.exercise}`;
             if (!seenKeys.has(key)) {
               seenKeys.add(key);
               dedupedPrev.push(e);
             }
           }
+
+          console.log("[getOrCreateWeek] After dedup:", dedupedPrev.length, "exercises to copy");
 
           const rows = dedupedPrev.map((e, idx) => ({
             week_id: weekRow!.id,
@@ -330,7 +344,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
             sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
             sort_order: idx,
           }));
-          await supabase.from("workout_exercises").insert(rows);
+          const { error: insertErr } = await supabase.from("workout_exercises").insert(rows);
+          console.log("[getOrCreateWeek] Insert result:", insertErr ? `ERROR: ${insertErr.message}` : "OK");
 
           // Build result from copied exercises with last week's values
           const days: DayLog[] = FULL_DAYS.map((day) => {
