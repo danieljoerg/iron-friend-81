@@ -31,6 +31,7 @@ const Index = () => {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
   const skipNextFetchRef = useRef(false);
+  const pendingWeekDataRef = useRef<{ week: WeekLog; prevData: Record<string, ExerciseLog[]>; trainingDays: string[] | null } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -43,11 +44,24 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) return;
-    if (skipNextFetchRef.current) {
-      console.log("[Index] Skipping fetch for", weekStart, "- data already set from completeWeek");
-      skipNextFetchRef.current = false;
+
+    // If we have pending data from completeWeek, use it directly instead of fetching
+    const pending = pendingWeekDataRef.current;
+    if (pending && pending.week.weekStart === weekStart) {
+      console.log("[Index] Using pending data for", weekStart, "- exercises per day:", pending.week.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+      pendingWeekDataRef.current = null;
+      setWeek(pending.week);
+      setPrevWeekData(pending.prevData);
+      setWeekTrainingDays(pending.trainingDays);
+      setLoading(false);
+      // Still load rep ranges and mesocycle
+      Promise.all([getRepRangesDb(user.id), getActiveMesocycle(user.id)]).then(([rr, meso]) => {
+        setRepRanges(rr);
+        setMesocycle(meso);
+      });
       return;
     }
+
     console.log("[Index] Fetching week data for", weekStart);
     setLoading(true);
     Promise.all([
@@ -136,15 +150,14 @@ const Index = () => {
     // Load prev week data for progression targets
     const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
 
-    // CRITICAL: Set skip flag BEFORE any state updates to prevent useEffect overwrite
-    skipNextFetchRef.current = true;
+    // Store the prepared data so the useEffect picks it up instead of fetching
+    pendingWeekDataRef.current = {
+      week: nextWeek,
+      prevData,
+      trainingDays: nextWeek.trainingDays ?? null,
+    };
 
-    // Update all state - weekStart LAST to ensure skip flag is read by effect
-    setWeek(nextWeek);
-    setPrevWeekData(prevData);
-    setWeekTrainingDays(nextWeek.trainingDays ?? null);
-    setLoading(false);
-    // Use functional update to ensure this triggers the effect AFTER other states are set
+    // Trigger navigation — the useEffect will find pendingWeekDataRef and use it
     setWeekStart(nextWeek.weekStart);
   };
 
