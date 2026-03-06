@@ -30,6 +30,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const skipNextFetchRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
@@ -42,6 +43,10 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) return;
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
     setLoading(true);
     Promise.all([
       getOrCreateWeekDb(weekStart, user.id),
@@ -119,9 +124,14 @@ const Index = () => {
     // Also load prev week data for progression targets (= the just-completed week)
     const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
 
+    // Skip the useEffect re-fetch since we already have the data
+    skipNextFetchRef.current = true;
+
     // Switch view to next week
     setWeek(nextWeek);
     setPrevWeekData(prevData);
+    setWeekTrainingDays(nextWeek.trainingDays ?? null);
+    setLoading(false);
     setWeekStart(nextWeek.weekStart);
   };
 
