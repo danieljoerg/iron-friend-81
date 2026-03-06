@@ -47,10 +47,10 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Skip fetch if completeWeek already set the state directly
-    if (skipNextFetchRef.current) {
-      skipNextFetchRef.current = false;
-      console.log("[Index] Skipping fetch for", weekStart, "— data already set by completeWeek");
+    // If handleCompleteWeek already loaded the data for this weekStart, skip
+    if (dataVersionRef.current > lastLoadedVersionRef.current && week.weekStart === weekStart) {
+      lastLoadedVersionRef.current = dataVersionRef.current;
+      console.log("[Index] Skipping fetch for", weekStart, "— data already set by completeWeek (v" + dataVersionRef.current + ")");
       return;
     }
 
