@@ -56,6 +56,7 @@ const Index = () => {
 
     console.log("[Index] Fetching week data for", weekStart);
     let cancelled = false;
+    const fetchVersion = dataVersionRef.current;
     setLoading(true);
     Promise.all([
       getOrCreateWeekDb(weekStart, user.id),
