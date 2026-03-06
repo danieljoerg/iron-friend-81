@@ -439,7 +439,7 @@ export async function completeWeekAndPrepareNext(
   completedWeek: WeekLog,
   userId: string
 ): Promise<WeekLog> {
-  // 1. Save the completed week (marks all done, persists everything)
+  // 1. Save the completed week
   await saveWeekDb(completedWeek, userId);
 
   // 2. Calculate next week start
@@ -456,15 +456,19 @@ export async function completeWeekAndPrepareNext(
     .maybeSingle();
 
   if (!nextWeekRow) {
-    const { data: newWeek } = await supabase
+    const { data: newWeek, error: createErr } = await supabase
       .from("workout_weeks")
       .insert({ user_id: userId, week_start: nextWeekStart })
       .select("id")
       .single();
+    if (createErr) {
+      console.error("[completeWeek] Failed to create next week row:", createErr);
+    }
     nextWeekRow = newWeek;
   }
 
   if (!nextWeekRow) {
+    console.error("[completeWeek] No next week row available, returning empty");
     return { weekStart: nextWeekStart, days: FULL_DAYS.map((day) => ({ day, exercises: [] })) };
   }
 
@@ -476,17 +480,19 @@ export async function completeWeekAndPrepareNext(
     .limit(1);
 
   if (existingExercises && existingExercises.length > 0) {
-    // Next week already has exercises, just load it normally
+    console.log("[completeWeek] Next week already has exercises, loading normally");
     return getOrCreateWeekDb(nextWeekStart, userId);
   }
 
-  // 5. Copy exercises from completed week to next week (with clean reps/kg, no done/rir)
+  // 5. Build exercise rows from completed week (copy structure with clean sets)
   const exerciseRows: any[] = [];
-  const nextDays: DayLog[] = FULL_DAYS.map((day) => {
+  const nextDays: DayLog[] = [];
+
+  for (const day of FULL_DAYS) {
     const completedDay = completedWeek.days.find((cd) => cd.day === day);
     const dayExercises: ExerciseLog[] = [];
 
-    if (completedDay) {
+    if (completedDay && completedDay.exercises.length > 0) {
       completedDay.exercises.forEach((ex, idx) => {
         const cleanSets = ex.sets.map((s) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
         exerciseRows.push({
@@ -501,11 +507,17 @@ export async function completeWeekAndPrepareNext(
       });
     }
 
-    return { day, exercises: dayExercises };
-  });
+    nextDays.push({ day, exercises: dayExercises });
+  }
+
+  console.log("[completeWeek] Copying", exerciseRows.length, "exercises to next week", nextWeekStart);
 
   if (exerciseRows.length > 0) {
-    await supabase.from("workout_exercises").insert(exerciseRows);
+    const { error: insertErr } = await supabase.from("workout_exercises").insert(exerciseRows);
+    if (insertErr) {
+      console.error("[completeWeek] Failed to insert exercises:", insertErr);
+      // Fallback: return the in-memory data anyway so UI shows something
+    }
   }
 
   return { weekStart: nextWeekStart, days: nextDays };
