@@ -84,10 +84,10 @@ const Index = () => {
   const navigateWeek = (direction: number) => {
     const d = new Date(weekStart + "T00:00:00");
     d.setDate(d.getDate() + direction * 7);
-    setWeekStart(formatDateString(d));
+    loadWeekData(formatDateString(d));
   };
 
-  const goToToday = () => setWeekStart(getWeekStart());
+  const goToToday = () => loadWeekData(getWeekStart());
 
   const handleCreateMesocycle = async (durationWeeks: number) => {
     if (!user) return;
