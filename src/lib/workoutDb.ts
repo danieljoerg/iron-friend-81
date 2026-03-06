@@ -207,20 +207,22 @@ export async function shouldDeload(userId: string): Promise<boolean> {
 }
 
 export async function getPreviousWeekData(weekStart: string, userId: string): Promise<Record<string, ExerciseLog[]>> {
+  // Find the most recent previous week that actually has exercises
   const { data: prevWeeks } = await supabase
     .from("workout_weeks")
-    .select("id, week_start")
+    .select("id, week_start, workout_exercises(id)")
     .eq("user_id", userId)
     .lt("week_start", weekStart)
     .order("week_start", { ascending: false })
-    .limit(1);
+    .limit(10);
 
-  if (!prevWeeks || prevWeeks.length === 0) return {};
+  const prevWeek = prevWeeks?.find((w: any) => w.workout_exercises && w.workout_exercises.length > 0);
+  if (!prevWeek) return {};
 
   const { data: exercises } = await supabase
     .from("workout_exercises")
     .select("day, exercise, sets, sort_order")
-    .eq("week_id", prevWeeks[0].id)
+    .eq("week_id", prevWeek.id)
     .order("sort_order");
 
   if (!exercises) return {};
@@ -228,11 +230,11 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
   const result: Record<string, ExerciseLog[]> = {};
   for (const day of FULL_DAYS) {
     const dayExs = exercises.filter((e) => e.day === day);
-    // Deduplicate by sort_order
-    const seen = new Set<number>();
+    // Deduplicate by exercise name
+    const seen = new Set<string>();
     const unique = dayExs.filter((e) => {
-      if (seen.has(e.sort_order)) return false;
-      seen.add(e.sort_order);
+      if (seen.has(e.exercise)) return false;
+      seen.add(e.exercise);
       return true;
     });
     result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
@@ -256,6 +258,8 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
 }
 
 async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promise<WeekLog> {
+  console.log("[getOrCreateWeek] START for", weekStart);
+  
   // Get or create week record
   let { data: weekRow } = await supabase
     .from("workout_weeks")
@@ -264,9 +268,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .eq("week_start", weekStart)
     .maybeSingle();
 
-
-
   if (!weekRow) {
+    console.log("[getOrCreateWeek] Creating new week row for", weekStart);
     const { data: newWeek } = await supabase
       .from("workout_weeks")
       .insert({ user_id: userId, week_start: weekStart })
@@ -276,15 +279,20 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
   }
 
   if (!weekRow) {
+    console.error("[getOrCreateWeek] Failed to get/create week row for", weekStart);
     return { weekStart, days: FULL_DAYS.map((day) => ({ day, exercises: [] })) };
   }
 
+  console.log("[getOrCreateWeek] Week row id:", weekRow.id);
+
   // Get exercises for this week
-  const { data: exercises } = await supabase
+  const { data: exercises, error: exErr } = await supabase
     .from("workout_exercises")
     .select("*")
     .eq("week_id", weekRow.id)
     .order("sort_order");
+
+  console.log("[getOrCreateWeek] Found", exercises?.length ?? 0, "exercises for week", weekStart, exErr ? `ERROR: ${exErr.message}` : "");
 
   // If week has no exercises, copy structure from most recent previous week
   if (!exercises || exercises.length === 0) {
@@ -294,33 +302,47 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
       .select("id", { count: "exact", head: true })
       .eq("week_id", weekRow.id);
 
+    console.log("[getOrCreateWeek] Double-check count:", count);
+
     if ((count ?? 0) === 0) {
+      // Find the most recent previous week that HAS exercises (skip empty orphan weeks)
       const { data: prevWeeks } = await supabase
         .from("workout_weeks")
-        .select("id, week_start")
+        .select("id, week_start, workout_exercises(id)")
         .eq("user_id", userId)
         .lt("week_start", weekStart)
         .order("week_start", { ascending: false })
-        .limit(1);
+        .limit(10);
 
-      if (prevWeeks && prevWeeks.length > 0) {
+      // Find first previous week that actually has exercises
+      const prevWeekWithExercises = prevWeeks?.find((w: any) => 
+        w.workout_exercises && w.workout_exercises.length > 0
+      );
+      
+      console.log("[getOrCreateWeek] Previous week with exercises:", prevWeekWithExercises?.week_start, prevWeekWithExercises?.id);
+
+      if (prevWeekWithExercises) {
         const { data: prevExercises } = await supabase
           .from("workout_exercises")
           .select("day, exercise, sets, sort_order")
-          .eq("week_id", prevWeeks[0].id)
+          .eq("week_id", prevWeekWithExercises.id)
           .order("sort_order");
 
+        console.log("[getOrCreateWeek] Previous week exercises:", prevExercises?.length ?? 0);
+
         if (prevExercises && prevExercises.length > 0) {
-          // Deduplicate prev exercises per day+sort_order
+          // Deduplicate prev exercises per day+exercise name
           const dedupedPrev: typeof prevExercises = [];
           const seenKeys = new Set<string>();
           for (const e of prevExercises) {
-            const key = `${e.day}:${e.sort_order}`;
+            const key = `${e.day}:${e.exercise}`;
             if (!seenKeys.has(key)) {
               seenKeys.add(key);
               dedupedPrev.push(e);
             }
           }
+
+          console.log("[getOrCreateWeek] After dedup:", dedupedPrev.length, "exercises to copy");
 
           const rows = dedupedPrev.map((e, idx) => ({
             week_id: weekRow!.id,
@@ -330,7 +352,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
             sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
             sort_order: idx,
           }));
-          await supabase.from("workout_exercises").insert(rows);
+          const { error: insertErr } = await supabase.from("workout_exercises").insert(rows);
+          console.log("[getOrCreateWeek] Insert result:", insertErr ? `ERROR: ${insertErr.message}` : "OK");
 
           // Build result from copied exercises with last week's values
           const days: DayLog[] = FULL_DAYS.map((day) => {
@@ -360,11 +383,11 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
   // Build the WeekLog structure, deduplicating exercises by day+sort_order
   const days: DayLog[] = FULL_DAYS.map((day) => {
     const dayExs = (exercises || []).filter((e) => e.day === day);
-    // Deduplicate: keep only one entry per unique sort_order per day
-    const seen = new Set<number>();
+    // Deduplicate: keep only one entry per unique exercise name per day
+    const seenExercises = new Set<string>();
     const uniqueExs = dayExs.filter((e) => {
-      if (seen.has(e.sort_order)) return false;
-      seen.add(e.sort_order);
+      if (seenExercises.has(e.exercise)) return false;
+      seenExercises.add(e.exercise);
       return true;
     });
     const dayExercises: ExerciseLog[] = uniqueExs
@@ -411,17 +434,21 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
     .delete()
     .eq("week_id", weekRow.id);
 
-  // Insert all exercises
+  // Insert all exercises (deduplicate: one entry per day+exercise name)
   const rows: any[] = [];
   week.days.forEach((day) => {
+    const seenExercises = new Set<string>();
     day.exercises.forEach((ex, idx) => {
+      // Skip duplicate exercise names within the same day
+      if (seenExercises.has(ex.exercise)) return;
+      seenExercises.add(ex.exercise);
       rows.push({
         week_id: weekRow!.id,
         user_id: userId,
         day: day.day,
         exercise: ex.exercise,
         sets: ex.sets,
-        sort_order: idx,
+        sort_order: rows.filter(r => r.day === day.day).length,
       });
     });
   });
@@ -491,9 +518,13 @@ export async function completeWeekAndPrepareNext(
   for (const day of FULL_DAYS) {
     const completedDay = completedWeek.days.find((cd) => cd.day === day);
     const dayExercises: ExerciseLog[] = [];
+    const seenExercises = new Set<string>();
 
     if (completedDay && completedDay.exercises.length > 0) {
-      completedDay.exercises.forEach((ex, idx) => {
+      completedDay.exercises.forEach((ex) => {
+        // Skip duplicate exercise names within the same day
+        if (seenExercises.has(ex.exercise)) return;
+        seenExercises.add(ex.exercise);
         const cleanSets = ex.sets.map((s) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
         exerciseRows.push({
           week_id: nextWeekRow!.id,
@@ -501,7 +532,7 @@ export async function completeWeekAndPrepareNext(
           day,
           exercise: ex.exercise,
           sets: cleanSets,
-          sort_order: idx,
+          sort_order: dayExercises.length,
         });
         dayExercises.push({ exercise: ex.exercise, sets: cleanSets });
       });
