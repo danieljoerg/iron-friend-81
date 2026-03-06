@@ -340,10 +340,17 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
   const daysDone: string[] = ((weekMeta as any)?.days_done as string[]) || [];
   const weekTrainingDays: string[] | null = (weekMeta as any)?.training_days ?? null;
 
-  // Build the WeekLog structure
+  // Build the WeekLog structure, deduplicating exercises by day+sort_order
   const days: DayLog[] = FULL_DAYS.map((day) => {
-    const dayExercises: ExerciseLog[] = (exercises || [])
-      .filter((e) => e.day === day)
+    const dayExs = (exercises || []).filter((e) => e.day === day);
+    // Deduplicate: keep only one entry per unique sort_order per day
+    const seen = new Set<number>();
+    const uniqueExs = dayExs.filter((e) => {
+      if (seen.has(e.sort_order)) return false;
+      seen.add(e.sort_order);
+      return true;
+    });
+    const dayExercises: ExerciseLog[] = uniqueExs
       .map((e) => ({
         exercise: e.exercise,
         sets: (e.sets as any[]) || [],
