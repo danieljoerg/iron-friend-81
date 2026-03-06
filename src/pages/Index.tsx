@@ -150,15 +150,14 @@ const Index = () => {
     // Load prev week data for progression targets
     const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
 
-    // CRITICAL: Set skip flag BEFORE any state updates to prevent useEffect overwrite
-    skipNextFetchRef.current = true;
+    // Store the prepared data so the useEffect picks it up instead of fetching
+    pendingWeekDataRef.current = {
+      week: nextWeek,
+      prevData,
+      trainingDays: nextWeek.trainingDays ?? null,
+    };
 
-    // Update all state - weekStart LAST to ensure skip flag is read by effect
-    setWeek(nextWeek);
-    setPrevWeekData(prevData);
-    setWeekTrainingDays(nextWeek.trainingDays ?? null);
-    setLoading(false);
-    // Use functional update to ensure this triggers the effect AFTER other states are set
+    // Trigger navigation — the useEffect will find pendingWeekDataRef and use it
     setWeekStart(nextWeek.weekStart);
   };
 
