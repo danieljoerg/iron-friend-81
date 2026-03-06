@@ -360,11 +360,11 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
   // Build the WeekLog structure, deduplicating exercises by day+sort_order
   const days: DayLog[] = FULL_DAYS.map((day) => {
     const dayExs = (exercises || []).filter((e) => e.day === day);
-    // Deduplicate: keep only one entry per unique sort_order per day
-    const seen = new Set<number>();
+    // Deduplicate: keep only one entry per unique exercise name per day
+    const seenExercises = new Set<string>();
     const uniqueExs = dayExs.filter((e) => {
-      if (seen.has(e.sort_order)) return false;
-      seen.add(e.sort_order);
+      if (seenExercises.has(e.exercise)) return false;
+      seenExercises.add(e.exercise);
       return true;
     });
     const dayExercises: ExerciseLog[] = uniqueExs
