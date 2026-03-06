@@ -280,8 +280,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .eq("week_id", weekRow.id)
     .order("sort_order");
 
-  // If new week with no exercises, copy structure from most recent previous week
-  if (isNew && (!exercises || exercises.length === 0)) {
+  // If week has no exercises, copy structure from most recent previous week
+  if (!exercises || exercises.length === 0) {
     // Double-check no exercises were inserted by a concurrent call
     const { count } = await supabase
       .from("workout_exercises")
