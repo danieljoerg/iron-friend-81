@@ -77,7 +77,7 @@ export async function setYoutubeUrlDb(userId: string, exercise: string, youtubeU
     .from("exercise_rep_ranges")
     .upsert({ user_id: userId, exercise, youtube_url: youtubeUrl } as any, { onConflict: "user_id,exercise" });
 }
-import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, type WeekLog, type DayLog, type ExerciseLog, type WorkoutSet, type MuscleGroup } from "./workoutData";
+import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, formatDateString, type WeekLog, type DayLog, type ExerciseLog, type WorkoutSet, type MuscleGroup } from "./workoutData";
 
 // Double Progression: increase reps first, then weight
 const COMPOUND_INCREMENT = 2.5;
