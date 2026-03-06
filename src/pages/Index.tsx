@@ -147,8 +147,8 @@ const Index = () => {
       getActiveMesocycle(user.id),
     ]);
 
-    // Bump fetch version to invalidate any in-flight useEffect fetch
-    fetchVersionRef.current++;
+    // Set skip flag BEFORE setting weekStart to prevent useEffect from overwriting
+    skipNextFetchRef.current = true;
 
     // Set ALL state directly — no useEffect needed
     setWeek(nextWeek);
@@ -156,8 +156,8 @@ const Index = () => {
     setRepRanges(rr);
     setMesocycle(meso);
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
-    setWeekStart(nextWeek.weekStart);
     setLoading(false);
+    setWeekStart(nextWeek.weekStart);
   };
 
   const handleToggleWeekDay = (day: string) => {
