@@ -227,9 +227,15 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
 
   const result: Record<string, ExerciseLog[]> = {};
   for (const day of FULL_DAYS) {
-    result[day] = exercises
-      .filter((e) => e.day === day)
-      .map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
+    const dayExs = exercises.filter((e) => e.day === day);
+    // Deduplicate by sort_order
+    const seen = new Set<number>();
+    const unique = dayExs.filter((e) => {
+      if (seen.has(e.sort_order)) return false;
+      seen.add(e.sort_order);
+      return true;
+    });
+    result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
   }
   return result;
 }
@@ -258,7 +264,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .eq("week_start", weekStart)
     .maybeSingle();
 
-  const isNew = !weekRow;
+
 
   if (!weekRow) {
     const { data: newWeek } = await supabase
@@ -280,8 +286,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .eq("week_id", weekRow.id)
     .order("sort_order");
 
-  // If new week with no exercises, copy structure from most recent previous week
-  if (isNew && (!exercises || exercises.length === 0)) {
+  // If week has no exercises, copy structure from most recent previous week
+  if (!exercises || exercises.length === 0) {
     // Double-check no exercises were inserted by a concurrent call
     const { count } = await supabase
       .from("workout_exercises")
@@ -305,19 +311,30 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
           .order("sort_order");
 
         if (prevExercises && prevExercises.length > 0) {
-          const rows = prevExercises.map((e) => ({
+          // Deduplicate prev exercises per day+sort_order
+          const dedupedPrev: typeof prevExercises = [];
+          const seenKeys = new Set<string>();
+          for (const e of prevExercises) {
+            const key = `${e.day}:${e.sort_order}`;
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              dedupedPrev.push(e);
+            }
+          }
+
+          const rows = dedupedPrev.map((e, idx) => ({
             week_id: weekRow!.id,
             user_id: userId,
             day: e.day,
             exercise: e.exercise,
             sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
-            sort_order: e.sort_order,
+            sort_order: idx,
           }));
           await supabase.from("workout_exercises").insert(rows);
 
           // Build result from copied exercises with last week's values
           const days: DayLog[] = FULL_DAYS.map((day) => {
-            const dayExercises: ExerciseLog[] = prevExercises
+            const dayExercises: ExerciseLog[] = dedupedPrev
               .filter((e) => e.day === day)
               .map((e) => ({
                 exercise: e.exercise,
