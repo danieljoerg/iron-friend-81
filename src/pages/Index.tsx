@@ -44,9 +44,11 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     if (skipNextFetchRef.current) {
+      console.log("[Index] Skipping fetch for", weekStart, "- data already set from completeWeek");
       skipNextFetchRef.current = false;
       return;
     }
+    console.log("[Index] Fetching week data for", weekStart);
     setLoading(true);
     Promise.all([
       getOrCreateWeekDb(weekStart, user.id),
@@ -54,6 +56,7 @@ const Index = () => {
       getPreviousWeekData(weekStart, user.id),
       getActiveMesocycle(user.id),
     ]).then(([w, rr, prev, meso]) => {
+      console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
       setWeek(w);
       setRepRanges(rr);
       setPrevWeekData(prev);
