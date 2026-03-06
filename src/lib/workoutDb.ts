@@ -234,7 +234,22 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
   return result;
 }
 
+// Simple in-flight deduplication to prevent concurrent getOrCreateWeekDb calls
+const _weekLocks = new Map<string, Promise<WeekLog>>();
+
 export async function getOrCreateWeekDb(weekStart: string, userId: string): Promise<WeekLog> {
+  const lockKey = `${userId}:${weekStart}`;
+  const existing = _weekLocks.get(lockKey);
+  if (existing) return existing;
+
+  const promise = _getOrCreateWeekDbImpl(weekStart, userId).finally(() => {
+    _weekLocks.delete(lockKey);
+  });
+  _weekLocks.set(lockKey, promise);
+  return promise;
+}
+
+async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promise<WeekLog> {
   // Get or create week record
   let { data: weekRow } = await supabase
     .from("workout_weeks")
@@ -267,43 +282,51 @@ export async function getOrCreateWeekDb(weekStart: string, userId: string): Prom
 
   // If new week with no exercises, copy structure from most recent previous week
   if (isNew && (!exercises || exercises.length === 0)) {
-    const { data: prevWeeks } = await supabase
-      .from("workout_weeks")
-      .select("id, week_start")
-      .eq("user_id", userId)
-      .lt("week_start", weekStart)
-      .order("week_start", { ascending: false })
-      .limit(1);
+    // Double-check no exercises were inserted by a concurrent call
+    const { count } = await supabase
+      .from("workout_exercises")
+      .select("id", { count: "exact", head: true })
+      .eq("week_id", weekRow.id);
 
-    if (prevWeeks && prevWeeks.length > 0) {
-      const { data: prevExercises } = await supabase
-        .from("workout_exercises")
-        .select("day, exercise, sets, sort_order")
-        .eq("week_id", prevWeeks[0].id)
-        .order("sort_order");
+    if ((count ?? 0) === 0) {
+      const { data: prevWeeks } = await supabase
+        .from("workout_weeks")
+        .select("id, week_start")
+        .eq("user_id", userId)
+        .lt("week_start", weekStart)
+        .order("week_start", { ascending: false })
+        .limit(1);
 
-      if (prevExercises && prevExercises.length > 0) {
-        const rows = prevExercises.map((e) => ({
-          week_id: weekRow!.id,
-          user_id: userId,
-          day: e.day,
-          exercise: e.exercise,
-          sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
-          sort_order: e.sort_order,
-        }));
-        await supabase.from("workout_exercises").insert(rows);
+      if (prevWeeks && prevWeeks.length > 0) {
+        const { data: prevExercises } = await supabase
+          .from("workout_exercises")
+          .select("day, exercise, sets, sort_order")
+          .eq("week_id", prevWeeks[0].id)
+          .order("sort_order");
 
-        // Build result from copied exercises with last week's values
-        const days: DayLog[] = FULL_DAYS.map((day) => {
-          const dayExercises: ExerciseLog[] = prevExercises
-            .filter((e) => e.day === day)
-            .map((e) => ({
-              exercise: e.exercise,
-              sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
-            }));
-          return { day, exercises: dayExercises };
-        });
-        return { weekStart, days };
+        if (prevExercises && prevExercises.length > 0) {
+          const rows = prevExercises.map((e) => ({
+            week_id: weekRow!.id,
+            user_id: userId,
+            day: e.day,
+            exercise: e.exercise,
+            sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+            sort_order: e.sort_order,
+          }));
+          await supabase.from("workout_exercises").insert(rows);
+
+          // Build result from copied exercises with last week's values
+          const days: DayLog[] = FULL_DAYS.map((day) => {
+            const dayExercises: ExerciseLog[] = prevExercises
+              .filter((e) => e.day === day)
+              .map((e) => ({
+                exercise: e.exercise,
+                sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+              }));
+            return { day, exercises: dayExercises };
+          });
+          return { weekStart, days };
+        }
       }
     }
   }
