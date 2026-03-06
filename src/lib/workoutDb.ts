@@ -431,6 +431,86 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
   }
 }
 
+/**
+ * Complete a week and prepare the next week with copied exercises.
+ * Returns the next week's WeekLog ready for display.
+ */
+export async function completeWeekAndPrepareNext(
+  completedWeek: WeekLog,
+  userId: string
+): Promise<WeekLog> {
+  // 1. Save the completed week (marks all done, persists everything)
+  await saveWeekDb(completedWeek, userId);
+
+  // 2. Calculate next week start
+  const d = new Date(completedWeek.weekStart + "T00:00:00");
+  d.setDate(d.getDate() + 7);
+  const nextWeekStart = formatDateString(d);
+
+  // 3. Get or create the next week row
+  let { data: nextWeekRow } = await supabase
+    .from("workout_weeks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("week_start", nextWeekStart)
+    .maybeSingle();
+
+  if (!nextWeekRow) {
+    const { data: newWeek } = await supabase
+      .from("workout_weeks")
+      .insert({ user_id: userId, week_start: nextWeekStart })
+      .select("id")
+      .single();
+    nextWeekRow = newWeek;
+  }
+
+  if (!nextWeekRow) {
+    return { weekStart: nextWeekStart, days: FULL_DAYS.map((day) => ({ day, exercises: [] })) };
+  }
+
+  // 4. Check if next week already has exercises
+  const { data: existingExercises } = await supabase
+    .from("workout_exercises")
+    .select("id")
+    .eq("week_id", nextWeekRow.id)
+    .limit(1);
+
+  if (existingExercises && existingExercises.length > 0) {
+    // Next week already has exercises, just load it normally
+    return getOrCreateWeekDb(nextWeekStart, userId);
+  }
+
+  // 5. Copy exercises from completed week to next week (with clean reps/kg, no done/rir)
+  const exerciseRows: any[] = [];
+  const nextDays: DayLog[] = FULL_DAYS.map((day) => {
+    const completedDay = completedWeek.days.find((cd) => cd.day === day);
+    const dayExercises: ExerciseLog[] = [];
+
+    if (completedDay) {
+      completedDay.exercises.forEach((ex, idx) => {
+        const cleanSets = ex.sets.map((s) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
+        exerciseRows.push({
+          week_id: nextWeekRow!.id,
+          user_id: userId,
+          day,
+          exercise: ex.exercise,
+          sets: cleanSets,
+          sort_order: idx,
+        });
+        dayExercises.push({ exercise: ex.exercise, sets: cleanSets });
+      });
+    }
+
+    return { day, exercises: dayExercises };
+  });
+
+  if (exerciseRows.length > 0) {
+    await supabase.from("workout_exercises").insert(exerciseRows);
+  }
+
+  return { weekStart: nextWeekStart, days: nextDays };
+}
+
 export async function getExerciseProgressDb(
   exercise: string,
   userId: string
