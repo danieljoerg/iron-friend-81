@@ -30,9 +30,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
-  // Version counter: incremented by handleCompleteWeek to signal "data already loaded"
-  const dataVersionRef = useRef(0);
-  const lastLoadedVersionRef = useRef(0);
+  const fetchIdRef = useRef(0); // to discard stale fetches
 
   useEffect(() => {
     if (!user) return;
@@ -43,41 +41,32 @@ const Index = () => {
       });
   }, [user]);
 
-  // Load week data when weekStart changes
-  useEffect(() => {
+  // Explicit load function — called on mount, on navigation, but NOT after completeWeek
+  const loadWeekData = useCallback(async (ws: string) => {
     if (!user) return;
-    
-    // If handleCompleteWeek already loaded the data for this weekStart, skip
-    if (dataVersionRef.current > lastLoadedVersionRef.current && week.weekStart === weekStart) {
-      lastLoadedVersionRef.current = dataVersionRef.current;
-      console.log("[Index] Skipping fetch for", weekStart, "— data already set by completeWeek (v" + dataVersionRef.current + ")");
-      return;
-    }
-
-    console.log("[Index] Fetching week data for", weekStart);
-    let cancelled = false;
-    const fetchVersion = dataVersionRef.current;
+    const myFetchId = ++fetchIdRef.current;
     setLoading(true);
-    Promise.all([
-      getOrCreateWeekDb(weekStart, user.id),
+    const [w, rr, prev, meso] = await Promise.all([
+      getOrCreateWeekDb(ws, user.id),
       getRepRangesDb(user.id),
-      getPreviousWeekData(weekStart, user.id),
+      getPreviousWeekData(ws, user.id),
       getActiveMesocycle(user.id),
-    ]).then(([w, rr, prev, meso]) => {
-      if (cancelled || dataVersionRef.current > fetchVersion) {
-        console.log("[Index] Discarding stale fetch for", weekStart);
-        return;
-      }
-      console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
-      setWeek(w);
-      setRepRanges(rr);
-      setPrevWeekData(prev);
-      setMesocycle(meso);
-      setWeekTrainingDays(w.trainingDays ?? null);
-      setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [weekStart, user]);
+    ]);
+    if (fetchIdRef.current !== myFetchId) return; // stale
+    setWeek(w);
+    setRepRanges(rr);
+    setPrevWeekData(prev);
+    setMesocycle(meso);
+    setWeekTrainingDays(w.trainingDays ?? null);
+    setWeekStart(ws);
+    setLoading(false);
+  }, [user]);
+
+  // Load on mount and when user changes
+  useEffect(() => {
+    loadWeekData(weekStart);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleRepRangeChange = (exercise: string, min: number, max: number) => {
     setRepRanges((prev) => ({ ...prev, [exercise]: { exercise, min_reps: min, max_reps: max } }));
