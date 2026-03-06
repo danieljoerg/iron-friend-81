@@ -495,9 +495,13 @@ export async function completeWeekAndPrepareNext(
   for (const day of FULL_DAYS) {
     const completedDay = completedWeek.days.find((cd) => cd.day === day);
     const dayExercises: ExerciseLog[] = [];
+    const seenExercises = new Set<string>();
 
     if (completedDay && completedDay.exercises.length > 0) {
-      completedDay.exercises.forEach((ex, idx) => {
+      completedDay.exercises.forEach((ex) => {
+        // Skip duplicate exercise names within the same day
+        if (seenExercises.has(ex.exercise)) return;
+        seenExercises.add(ex.exercise);
         const cleanSets = ex.sets.map((s) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
         exerciseRows.push({
           week_id: nextWeekRow!.id,
@@ -505,7 +509,7 @@ export async function completeWeekAndPrepareNext(
           day,
           exercise: ex.exercise,
           sets: cleanSets,
-          sort_order: idx,
+          sort_order: dayExercises.length,
         });
         dayExercises.push({ exercise: ex.exercise, sets: cleanSets });
       });
