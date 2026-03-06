@@ -30,8 +30,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
-  const skipNextFetchRef = useRef(false);
-  const pendingWeekDataRef = useRef<{ week: WeekLog; prevData: Record<string, ExerciseLog[]>; trainingDays: string[] | null } | null>(null);
+  const fetchVersionRef = useRef(0);
 
   useEffect(() => {
     if (!user) return;
@@ -42,43 +41,31 @@ const Index = () => {
       });
   }, [user]);
 
-  useEffect(() => {
+  const loadWeek = useCallback(async (ws: string) => {
     if (!user) return;
-
-    // If we have pending data from completeWeek, use it directly instead of fetching
-    const pending = pendingWeekDataRef.current;
-    if (pending && pending.week.weekStart === weekStart) {
-      console.log("[Index] Using pending data for", weekStart, "- exercises per day:", pending.week.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
-      pendingWeekDataRef.current = null;
-      setWeek(pending.week);
-      setPrevWeekData(pending.prevData);
-      setWeekTrainingDays(pending.trainingDays);
-      setLoading(false);
-      // Still load rep ranges and mesocycle
-      Promise.all([getRepRangesDb(user.id), getActiveMesocycle(user.id)]).then(([rr, meso]) => {
-        setRepRanges(rr);
-        setMesocycle(meso);
-      });
-      return;
-    }
-
-    console.log("[Index] Fetching week data for", weekStart);
+    const version = ++fetchVersionRef.current;
     setLoading(true);
-    Promise.all([
-      getOrCreateWeekDb(weekStart, user.id),
+    const [w, rr, prev, meso] = await Promise.all([
+      getOrCreateWeekDb(ws, user.id),
       getRepRangesDb(user.id),
-      getPreviousWeekData(weekStart, user.id),
+      getPreviousWeekData(ws, user.id),
       getActiveMesocycle(user.id),
-    ]).then(([w, rr, prev, meso]) => {
-      console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
-      setWeek(w);
-      setRepRanges(rr);
-      setPrevWeekData(prev);
-      setMesocycle(meso);
-      setWeekTrainingDays(w.trainingDays ?? null);
-      setLoading(false);
-    });
-  }, [weekStart, user]);
+    ]);
+    // Only apply if this is still the latest request
+    if (fetchVersionRef.current !== version) return;
+    console.log("[Index] Loaded week", ws, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+    setWeek(w);
+    setRepRanges(rr);
+    setPrevWeekData(prev);
+    setMesocycle(meso);
+    setWeekTrainingDays(w.trainingDays ?? null);
+    setLoading(false);
+  }, [user]);
+
+  // Load week data when weekStart changes (but NOT after completeWeek — that sets state directly)
+  useEffect(() => {
+    loadWeek(weekStart);
+  }, [weekStart, loadWeek]);
 
   const handleRepRangeChange = (exercise: string, min: number, max: number) => {
     setRepRanges((prev) => ({ ...prev, [exercise]: { exercise, min_reps: min, max_reps: max } }));
