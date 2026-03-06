@@ -134,18 +134,24 @@ const Index = () => {
     console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
       "exercises:", nextWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
 
-    // Load prev week data for progression targets
-    const prevData = await getPreviousWeekData(nextWeek.weekStart, user.id);
+    // Load prev week data and rep ranges for the next week
+    const [prevData, rr, meso] = await Promise.all([
+      getPreviousWeekData(nextWeek.weekStart, user.id),
+      getRepRangesDb(user.id),
+      getActiveMesocycle(user.id),
+    ]);
 
-    // Store the prepared data so the useEffect picks it up instead of fetching
-    pendingWeekDataRef.current = {
-      week: nextWeek,
-      prevData,
-      trainingDays: nextWeek.trainingDays ?? null,
-    };
+    // Bump fetch version to invalidate any in-flight useEffect fetch
+    fetchVersionRef.current++;
 
-    // Trigger navigation — the useEffect will find pendingWeekDataRef and use it
+    // Set ALL state directly — no useEffect needed
+    setWeek(nextWeek);
+    setPrevWeekData(prevData);
+    setRepRanges(rr);
+    setMesocycle(meso);
+    setWeekTrainingDays(nextWeek.trainingDays ?? null);
     setWeekStart(nextWeek.weekStart);
+    setLoading(false);
   };
 
   const handleToggleWeekDay = (day: string) => {
