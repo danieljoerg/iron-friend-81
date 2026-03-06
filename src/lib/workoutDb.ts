@@ -411,17 +411,21 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
     .delete()
     .eq("week_id", weekRow.id);
 
-  // Insert all exercises
+  // Insert all exercises (deduplicate: one entry per day+exercise name)
   const rows: any[] = [];
   week.days.forEach((day) => {
+    const seenExercises = new Set<string>();
     day.exercises.forEach((ex, idx) => {
+      // Skip duplicate exercise names within the same day
+      if (seenExercises.has(ex.exercise)) return;
+      seenExercises.add(ex.exercise);
       rows.push({
         week_id: weekRow!.id,
         user_id: userId,
         day: day.day,
         exercise: ex.exercise,
         sets: ex.sets,
-        sort_order: idx,
+        sort_order: rows.filter(r => r.day === day.day).length,
       });
     });
   });
