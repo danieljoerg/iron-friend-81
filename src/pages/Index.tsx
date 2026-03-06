@@ -30,7 +30,9 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
-  const skipNextFetchRef = useRef(false);
+  // Version counter: incremented by handleCompleteWeek to signal "data already loaded"
+  const dataVersionRef = useRef(0);
+  const lastLoadedVersionRef = useRef(0);
 
   useEffect(() => {
     if (!user) return;
