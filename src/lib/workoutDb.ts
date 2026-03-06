@@ -303,13 +303,14 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     console.log("[getOrCreateWeek] Double-check count:", count);
 
     if ((count ?? 0) === 0) {
+      // Find the most recent previous week that HAS exercises (skip empty orphan weeks)
       const { data: prevWeeks } = await supabase
         .from("workout_weeks")
-        .select("id, week_start")
+        .select("id, week_start, workout_exercises(id)")
         .eq("user_id", userId)
         .lt("week_start", weekStart)
         .order("week_start", { ascending: false })
-        .limit(1);
+        .limit(10);
 
       console.log("[getOrCreateWeek] Previous week:", prevWeeks?.[0]?.week_start, prevWeeks?.[0]?.id);
 
