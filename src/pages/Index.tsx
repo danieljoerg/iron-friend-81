@@ -43,6 +43,10 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) return;
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
     setLoading(true);
     Promise.all([
       getOrCreateWeekDb(weekStart, user.id),
