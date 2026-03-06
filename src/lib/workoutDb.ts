@@ -305,19 +305,30 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
           .order("sort_order");
 
         if (prevExercises && prevExercises.length > 0) {
-          const rows = prevExercises.map((e) => ({
+          // Deduplicate prev exercises per day+sort_order
+          const dedupedPrev: typeof prevExercises = [];
+          const seenKeys = new Set<string>();
+          for (const e of prevExercises) {
+            const key = `${e.day}:${e.sort_order}`;
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              dedupedPrev.push(e);
+            }
+          }
+
+          const rows = dedupedPrev.map((e, idx) => ({
             week_id: weekRow!.id,
             user_id: userId,
             day: e.day,
             exercise: e.exercise,
             sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
-            sort_order: e.sort_order,
+            sort_order: idx,
           }));
           await supabase.from("workout_exercises").insert(rows);
 
           // Build result from copied exercises with last week's values
           const days: DayLog[] = FULL_DAYS.map((day) => {
-            const dayExercises: ExerciseLog[] = prevExercises
+            const dayExercises: ExerciseLog[] = dedupedPrev
               .filter((e) => e.day === day)
               .map((e) => ({
                 exercise: e.exercise,
