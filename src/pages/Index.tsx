@@ -153,8 +153,8 @@ const Index = () => {
       getActiveMesocycle(user.id),
     ]);
 
-    // Set skip flag BEFORE setting weekStart to prevent useEffect from overwriting
-    skipNextFetchRef.current = true;
+    // Increment version so the useEffect knows not to fetch
+    dataVersionRef.current += 1;
 
     // Set ALL state directly — no useEffect needed
     setWeek(nextWeek);
