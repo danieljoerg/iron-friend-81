@@ -30,7 +30,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
-  const fetchVersionRef = useRef(0);
+  const skipNextFetchRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
@@ -41,31 +41,37 @@ const Index = () => {
       });
   }, [user]);
 
-  const loadWeek = useCallback(async (ws: string) => {
-    if (!user) return;
-    const version = ++fetchVersionRef.current;
-    setLoading(true);
-    const [w, rr, prev, meso] = await Promise.all([
-      getOrCreateWeekDb(ws, user.id),
-      getRepRangesDb(user.id),
-      getPreviousWeekData(ws, user.id),
-      getActiveMesocycle(user.id),
-    ]);
-    // Only apply if this is still the latest request
-    if (fetchVersionRef.current !== version) return;
-    console.log("[Index] Loaded week", ws, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
-    setWeek(w);
-    setRepRanges(rr);
-    setPrevWeekData(prev);
-    setMesocycle(meso);
-    setWeekTrainingDays(w.trainingDays ?? null);
-    setLoading(false);
-  }, [user]);
-
-  // Load week data when weekStart changes (but NOT after completeWeek — that sets state directly)
+  // Load week data when weekStart changes
   useEffect(() => {
-    loadWeek(weekStart);
-  }, [weekStart, loadWeek]);
+    if (!user) return;
+    
+    // Skip fetch if completeWeek already set the state directly
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      console.log("[Index] Skipping fetch for", weekStart, "— data already set by completeWeek");
+      return;
+    }
+
+    console.log("[Index] Fetching week data for", weekStart);
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      getOrCreateWeekDb(weekStart, user.id),
+      getRepRangesDb(user.id),
+      getPreviousWeekData(weekStart, user.id),
+      getActiveMesocycle(user.id),
+    ]).then(([w, rr, prev, meso]) => {
+      if (cancelled) return;
+      console.log("[Index] Loaded week", weekStart, "- exercises per day:", w.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
+      setWeek(w);
+      setRepRanges(rr);
+      setPrevWeekData(prev);
+      setMesocycle(meso);
+      setWeekTrainingDays(w.trainingDays ?? null);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [weekStart, user]);
 
   const handleRepRangeChange = (exercise: string, min: number, max: number) => {
     setRepRanges((prev) => ({ ...prev, [exercise]: { exercise, min_reps: min, max_reps: max } }));
