@@ -31,6 +31,7 @@ const Index = () => {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
   const skipNextFetchRef = useRef(false);
+  const pendingWeekDataRef = useRef<{ week: WeekLog; prevData: Record<string, ExerciseLog[]>; trainingDays: string[] | null } | null>(null);
 
   useEffect(() => {
     if (!user) return;
