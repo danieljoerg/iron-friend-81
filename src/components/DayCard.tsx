@@ -1,4 +1,4 @@
-import { Plus, Trash2, Settings2, Target, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap, MessageSquare } from "lucide-react";
+import { Plus, Trash2, Settings2, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap, MessageSquare } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
@@ -446,16 +446,10 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
               const targets = isDeloadWeek && prevEx ? computeDeloadTargets(prevEx.sets) : normalTargets;
               return (
                 <div className="space-y-1">
-                  {targets.length > 0 && (
-                    <div className="flex items-center gap-1 mb-1">
-                      <Target className={`w-2.5 h-2.5 ${isDeloadWeek ? 'text-yellow-500/60' : 'text-primary/60'}`} />
-                      <span className={`text-[9px] font-mono ${isDeloadWeek ? 'text-yellow-600/60' : 'text-primary/60'}`}>
-                        {isDeloadWeek ? 'Deload: ' : 'Ziel: '}{targets.map((t) => `${t.reps}×${t.kg}kg`).join(", ")}
-                      </span>
-                    </div>
-                  )}
                   {ex.sets.map((set, setIdx) => {
                     const target = targets[setIdx];
+                    const hasTarget = target && (target.reps > 0 || target.kg > 0);
+                    const isProgression = hasTarget && (target.reps !== set.reps || target.kg !== set.kg);
                     return (
                     <div key={setIdx} className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-all ${
                       set.done 
@@ -469,7 +463,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           type="number"
                           min={0}
                           value={set.reps || ""}
-                          placeholder={target ? `${target.reps}` : "reps"}
+                          placeholder="reps"
                           onChange={(e) => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
                           disabled={set.done}
                           className={`flex-1 min-w-0 rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed transition-all ${
@@ -484,7 +478,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           min={0}
                           step={0.5}
                           value={set.kg || ""}
-                          placeholder={target ? `${target.kg}` : "kg"}
+                          placeholder="kg"
                           onChange={(e) => updateSet(exIdx, setIdx, "kg", Number(e.target.value))}
                           disabled={set.done}
                           className={`flex-1 min-w-0 rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed transition-all ${
@@ -494,6 +488,12 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           }`}
                         />
                         <span className={`text-[10px] font-mono shrink-0 ${set.done ? 'text-primary/60' : 'text-muted-foreground'}`}>kg</span>
+                        {/* Progression target */}
+                        {hasTarget && isProgression && !set.done && (
+                          <span className={`text-[9px] font-mono shrink-0 px-1 py-0.5 rounded ${isDeloadWeek ? 'text-yellow-600 bg-yellow-500/10' : 'text-primary bg-primary/10'}`}>
+                            →{target.reps}×{target.kg}
+                          </span>
+                        )}
                         <input
                           type="number"
                           min={0}
