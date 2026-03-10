@@ -12,6 +12,7 @@ import { getOrCreateWeekDb, saveWeekDb, completeWeekAndPrepareNext, getRepRanges
 import MesocycleBanner from "@/components/MesocycleBanner";
 import type { ExerciseLog } from "@/lib/workoutData";
 import { useAuth } from "@/hooks/useAuth";
+import { getMesoTheme } from "@/lib/mesoTheme";
 
 const Index = () => {
   const { user, signOut } = useAuth();
