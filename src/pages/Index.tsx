@@ -12,6 +12,7 @@ import { getOrCreateWeekDb, saveWeekDb, completeWeekAndPrepareNext, getRepRanges
 import MesocycleBanner from "@/components/MesocycleBanner";
 import type { ExerciseLog } from "@/lib/workoutData";
 import { useAuth } from "@/hooks/useAuth";
+import { getMesoTheme } from "@/lib/mesoTheme";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -102,6 +103,7 @@ const Index = () => {
   };
 
   const mesoWeekInfo = mesocycle ? getMesocycleWeekInfo(mesocycle, weekStart) : null;
+  const mesoTheme = getMesoTheme(mesoWeekInfo);
   const effectiveTrainingDays = weekTrainingDays ?? defaultTrainingDays;
 
   const allDaysDone = week.days.every(d => d.done || (!effectiveTrainingDays.includes(d.day) && d.exercises.length === 0));
@@ -251,7 +253,7 @@ const Index = () => {
   }, [loading]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background transition-colors duration-700" style={mesoTheme ? mesoTheme as React.CSSProperties : undefined}>
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Top bar: greeting + settings */}
         <div className="flex items-center justify-center gap-2 mb-1 relative">
