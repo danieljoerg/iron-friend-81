@@ -253,7 +253,7 @@ const Index = () => {
   }, [loading]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background transition-colors duration-700" style={mesoTheme ? mesoTheme as React.CSSProperties : undefined}>
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Top bar: greeting + settings */}
         <div className="flex items-center justify-center gap-2 mb-1 relative">
