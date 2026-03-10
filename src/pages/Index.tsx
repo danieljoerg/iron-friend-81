@@ -103,6 +103,7 @@ const Index = () => {
   };
 
   const mesoWeekInfo = mesocycle ? getMesocycleWeekInfo(mesocycle, weekStart) : null;
+  const mesoTheme = getMesoTheme(mesoWeekInfo);
   const effectiveTrainingDays = weekTrainingDays ?? defaultTrainingDays;
 
   const allDaysDone = week.days.every(d => d.done || (!effectiveTrainingDays.includes(d.day) && d.exercises.length === 0));
