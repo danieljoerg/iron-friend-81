@@ -204,7 +204,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
           )}
           {isRestDay && !dayDone && dayLog.exercises.length === 0 && (
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              Rest
+              Eat & Rest Well
             </span>
           )}
         </div>
