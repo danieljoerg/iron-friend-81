@@ -455,6 +455,8 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
         exercise: ex.exercise,
         sets: ex.sets,
         sort_order: rows.filter(r => r.day === day.day).length,
+        superset_with_next: ex.supersetWithNext || false,
+        note: ex.note || null,
       });
     });
   });
