@@ -541,8 +541,10 @@ export async function completeWeekAndPrepareNext(
           exercise: ex.exercise,
           sets: cleanSets,
           sort_order: dayExercises.length,
+          superset_with_next: ex.supersetWithNext || false,
+          note: ex.note || null,
         });
-        dayExercises.push({ exercise: ex.exercise, sets: cleanSets });
+        dayExercises.push({ exercise: ex.exercise, sets: cleanSets, supersetWithNext: ex.supersetWithNext, note: ex.note });
       });
     }
 
