@@ -237,7 +237,7 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
       seen.add(e.exercise);
       return true;
     });
-    result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
+    result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [], supersetWithNext: (e as any).superset_with_next || false, note: (e as any).note || undefined }));
   }
   return result;
 }
