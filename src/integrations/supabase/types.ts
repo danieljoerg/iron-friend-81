@@ -122,8 +122,10 @@ export type Database = {
           day: string
           exercise: string
           id: string
+          note: string | null
           sets: Json
           sort_order: number
+          superset_with_next: boolean
           updated_at: string
           user_id: string
           week_id: string
@@ -133,8 +135,10 @@ export type Database = {
           day: string
           exercise: string
           id?: string
+          note?: string | null
           sets?: Json
           sort_order?: number
+          superset_with_next?: boolean
           updated_at?: string
           user_id: string
           week_id: string
@@ -144,8 +148,10 @@ export type Database = {
           day?: string
           exercise?: string
           id?: string
+          note?: string | null
           sets?: Json
           sort_order?: number
+          superset_with_next?: boolean
           updated_at?: string
           user_id?: string
           week_id?: string

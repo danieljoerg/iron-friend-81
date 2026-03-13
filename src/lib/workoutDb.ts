@@ -237,7 +237,7 @@ export async function getPreviousWeekData(weekStart: string, userId: string): Pr
       seen.add(e.exercise);
       return true;
     });
-    result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [] }));
+    result[day] = unique.map((e) => ({ exercise: e.exercise, sets: (e.sets as any[]) || [], supersetWithNext: (e as any).superset_with_next || false, note: (e as any).note || undefined }));
   }
   return result;
 }
@@ -324,7 +324,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
       if (prevWeekWithExercises) {
         const { data: prevExercises } = await supabase
           .from("workout_exercises")
-          .select("day, exercise, sets, sort_order")
+          .select("day, exercise, sets, sort_order, superset_with_next, note")
           .eq("week_id", prevWeekWithExercises.id)
           .order("sort_order");
 
@@ -351,6 +351,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
             exercise: e.exercise,
             sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
             sort_order: idx,
+            superset_with_next: (e as any).superset_with_next || false,
+            note: (e as any).note || null,
           }));
           const { error: insertErr } = await supabase.from("workout_exercises").insert(rows);
           console.log("[getOrCreateWeek] Insert result:", insertErr ? `ERROR: ${insertErr.message}` : "OK");
@@ -362,6 +364,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
               .map((e) => ({
                 exercise: e.exercise,
                 sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+                supersetWithNext: (e as any).superset_with_next || false,
+                note: (e as any).note || undefined,
               }));
             return { day, exercises: dayExercises };
           });
@@ -394,6 +398,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
       .map((e) => ({
         exercise: e.exercise,
         sets: (e.sets as any[]) || [],
+        supersetWithNext: (e as any).superset_with_next || false,
+        note: (e as any).note || undefined,
       }));
     return { day, exercises: dayExercises, done: daysDone.includes(day) };
   });
@@ -449,6 +455,8 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
         exercise: ex.exercise,
         sets: ex.sets,
         sort_order: rows.filter(r => r.day === day.day).length,
+        superset_with_next: ex.supersetWithNext || false,
+        note: ex.note || null,
       });
     });
   });
@@ -533,8 +541,10 @@ export async function completeWeekAndPrepareNext(
           exercise: ex.exercise,
           sets: cleanSets,
           sort_order: dayExercises.length,
+          superset_with_next: ex.supersetWithNext || false,
+          note: ex.note || null,
         });
-        dayExercises.push({ exercise: ex.exercise, sets: cleanSets });
+        dayExercises.push({ exercise: ex.exercise, sets: cleanSets, supersetWithNext: ex.supersetWithNext, note: ex.note });
       });
     }
 
