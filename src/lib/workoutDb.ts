@@ -364,6 +364,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
               .map((e) => ({
                 exercise: e.exercise,
                 sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+                supersetWithNext: (e as any).superset_with_next || false,
+                note: (e as any).note || undefined,
               }));
             return { day, exercises: dayExercises };
           });
