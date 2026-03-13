@@ -324,7 +324,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
       if (prevWeekWithExercises) {
         const { data: prevExercises } = await supabase
           .from("workout_exercises")
-          .select("day, exercise, sets, sort_order")
+          .select("day, exercise, sets, sort_order, superset_with_next, note")
           .eq("week_id", prevWeekWithExercises.id)
           .order("sort_order");
 
