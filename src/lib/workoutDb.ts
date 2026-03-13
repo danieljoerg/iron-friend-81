@@ -351,6 +351,8 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
             exercise: e.exercise,
             sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
             sort_order: idx,
+            superset_with_next: (e as any).superset_with_next || false,
+            note: (e as any).note || null,
           }));
           const { error: insertErr } = await supabase.from("workout_exercises").insert(rows);
           console.log("[getOrCreateWeek] Insert result:", insertErr ? `ERROR: ${insertErr.message}` : "OK");
