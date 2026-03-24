@@ -392,6 +392,15 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mesocycle Completion Screen */}
+      {showMesoCompletion && completedMesocycle && user && (
+        <MesocycleCompletionScreen
+          mesocycle={completedMesocycle}
+          userId={user.id}
+          onStartNextMesocycle={handleStartNextMesocycle}
+        />
+      )}
     </div>
   );
 };
