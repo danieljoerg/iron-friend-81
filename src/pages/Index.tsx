@@ -115,6 +115,9 @@ const Index = () => {
   const handleCompleteWeek = async () => {
     if (!user) return;
     
+    // Check if this is the last week of the mesocycle
+    const isLastMesoWeek = mesocycle && mesoWeekInfo && mesoWeekInfo.weekNumber === mesoWeekInfo.totalWeeks && mesoWeekInfo.isInMeso;
+
     // Mark all days as done
     const completedWeek: WeekLog = {
       ...week,
@@ -134,7 +137,17 @@ const Index = () => {
     // Optimistic update: show completed state
     setWeek(completedWeek);
 
-    // Save completed week + create next week with copied exercises
+    // Save completed week
+    await saveWeekDb(completedWeek, user.id);
+
+    // If last meso week, show completion screen instead of navigating
+    if (isLastMesoWeek && mesocycle) {
+      setCompletedMesocycle(mesocycle);
+      setShowMesoCompletion(true);
+      return;
+    }
+
+    // Normal flow: create next week with copied exercises
     const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
 
     console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
@@ -155,6 +168,33 @@ const Index = () => {
     setPrevWeekData(prevData);
     setRepRanges(rr);
     setMesocycle(meso);
+    setWeekTrainingDays(nextWeek.trainingDays ?? null);
+    setLoading(false);
+    setWeekStart(nextWeek.weekStart);
+  };
+
+  const handleStartNextMesocycle = async () => {
+    if (!user) return;
+    setShowMesoCompletion(false);
+    setCompletedMesocycle(null);
+
+    // Complete week and prepare next (the save was already done)
+    const completedWeek = week;
+    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+
+    const [prevData, rr] = await Promise.all([
+      getPreviousWeekData(nextWeek.weekStart, user.id),
+      getRepRangesDb(user.id),
+    ]);
+
+    // Create new mesocycle starting from next week
+    const newMeso = await createMesocycle(user.id, nextWeek.weekStart, mesocycle?.duration_weeks ?? 6);
+
+    fetchIdRef.current += 1;
+    setWeek(nextWeek);
+    setPrevWeekData(prevData);
+    setRepRanges(rr);
+    setMesocycle(newMeso);
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
     setLoading(false);
     setWeekStart(nextWeek.weekStart);
