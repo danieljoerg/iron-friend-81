@@ -117,11 +117,33 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   };
 
   const toggleSetDone = (exIdx: number, setIdx: number) => {
+    const set = dayLog.exercises[exIdx].sets[setIdx];
+    // If marking a set done (not undoing) and no readiness yet, show readiness check
+    if (!set.done && !dayLog.readiness) {
+      setPendingSetDone({ exIdx, setIdx });
+      setShowReadiness(true);
+      return;
+    }
     const exercises = [...dayLog.exercises];
     const sets = [...exercises[exIdx].sets];
     sets[setIdx] = { ...sets[setIdx], done: !sets[setIdx].done };
     exercises[exIdx] = { ...exercises[exIdx], sets };
     onChange({ ...dayLog, exercises });
+  };
+
+  const handleReadinessSelect = (value: number) => {
+    setShowReadiness(false);
+    const updated = { ...dayLog, readiness: value };
+    // If there was a pending set done, complete it now
+    if (pendingSetDone) {
+      const exercises = [...updated.exercises];
+      const sets = [...exercises[pendingSetDone.exIdx].sets];
+      sets[pendingSetDone.setIdx] = { ...sets[pendingSetDone.setIdx], done: true };
+      exercises[pendingSetDone.exIdx] = { ...exercises[pendingSetDone.exIdx], sets };
+      updated.exercises = exercises;
+      setPendingSetDone(null);
+    }
+    onChange(updated);
   };
 
   const addSet = (exIdx: number) => {
