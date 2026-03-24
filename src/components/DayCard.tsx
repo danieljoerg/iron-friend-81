@@ -65,7 +65,8 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
   const [editingNote, setEditingNote] = useState<number | null>(null);
-
+  const [showReadiness, setShowReadiness] = useState(false);
+  const [pendingSetDone, setPendingSetDone] = useState<{ exIdx: number; setIdx: number } | null>(null);
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
   const sensors = useSensors(
