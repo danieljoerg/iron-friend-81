@@ -226,6 +226,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
               Done
             </span>
           )}
+          {dayLog.readiness && (
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {["", "😫", "😮‍💨", "😐", "😊", "🔥"][dayLog.readiness]}
+            </span>
+          )}
           {isRestDay && !dayDone && dayLog.exercises.length === 0 && (
             <span className="text-[10px] font-medium uppercase tracking-wider text-orange-300/90 bg-orange-500/10 px-2 py-0.5 rounded-full">
               🍽️ Eat &amp; Rest Well 💤
