@@ -653,6 +653,14 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
       )}
       </div>}
 
+      {/* Readiness Check Dialog */}
+      <ReadinessCheck
+        day={dayLog.day}
+        open={showReadiness}
+        onSelect={handleReadinessSelect}
+        onCancel={() => { setShowReadiness(false); setPendingSetDone(null); }}
+      />
+
       {/* YouTube Video Overlay */}
       {videoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setVideoOverlay(null)}>
