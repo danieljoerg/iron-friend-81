@@ -32,6 +32,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const [showMesoCompletion, setShowMesoCompletion] = useState(false);
+  const [completedMesocycle, setCompletedMesocycle] = useState<Mesocycle | null>(null);
   const fetchIdRef = useRef(0); // to discard stale fetches
 
   useEffect(() => {
