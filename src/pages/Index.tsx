@@ -10,6 +10,7 @@ import ProgressChart from "@/components/ProgressChart";
 import { getWeekStart, formatDateString, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
 import { getOrCreateWeekDb, saveWeekDb, completeWeekAndPrepareNext, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, getActiveMesocycle, createMesocycle, deleteMesocycle, getMesocycleWeekInfo, computeDeloadTargets, type RepRange, type ExerciseTarget, type Mesocycle } from "@/lib/workoutDb";
 import MesocycleBanner from "@/components/MesocycleBanner";
+import MesocycleCompletionScreen from "@/components/MesocycleCompletionScreen";
 import type { ExerciseLog } from "@/lib/workoutData";
 import { useAuth } from "@/hooks/useAuth";
 import { getMesoTheme } from "@/lib/mesoTheme";
@@ -31,6 +32,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const [showMesoCompletion, setShowMesoCompletion] = useState(false);
+  const [completedMesocycle, setCompletedMesocycle] = useState<Mesocycle | null>(null);
   const fetchIdRef = useRef(0); // to discard stale fetches
 
   useEffect(() => {
@@ -112,6 +115,9 @@ const Index = () => {
   const handleCompleteWeek = async () => {
     if (!user) return;
     
+    // Check if this is the last week of the mesocycle
+    const isLastMesoWeek = mesocycle && mesoWeekInfo && mesoWeekInfo.weekNumber === mesoWeekInfo.totalWeeks && mesoWeekInfo.isInMeso;
+
     // Mark all days as done
     const completedWeek: WeekLog = {
       ...week,
@@ -131,7 +137,17 @@ const Index = () => {
     // Optimistic update: show completed state
     setWeek(completedWeek);
 
-    // Save completed week + create next week with copied exercises
+    // Save completed week
+    await saveWeekDb(completedWeek, user.id);
+
+    // If last meso week, show completion screen instead of navigating
+    if (isLastMesoWeek && mesocycle) {
+      setCompletedMesocycle(mesocycle);
+      setShowMesoCompletion(true);
+      return;
+    }
+
+    // Normal flow: create next week with copied exercises
     const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
 
     console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
@@ -152,6 +168,33 @@ const Index = () => {
     setPrevWeekData(prevData);
     setRepRanges(rr);
     setMesocycle(meso);
+    setWeekTrainingDays(nextWeek.trainingDays ?? null);
+    setLoading(false);
+    setWeekStart(nextWeek.weekStart);
+  };
+
+  const handleStartNextMesocycle = async () => {
+    if (!user) return;
+    setShowMesoCompletion(false);
+    setCompletedMesocycle(null);
+
+    // Complete week and prepare next (the save was already done)
+    const completedWeek = week;
+    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+
+    const [prevData, rr] = await Promise.all([
+      getPreviousWeekData(nextWeek.weekStart, user.id),
+      getRepRangesDb(user.id),
+    ]);
+
+    // Create new mesocycle starting from next week
+    const newMeso = await createMesocycle(user.id, nextWeek.weekStart, mesocycle?.duration_weeks ?? 6);
+
+    fetchIdRef.current += 1;
+    setWeek(nextWeek);
+    setPrevWeekData(prevData);
+    setRepRanges(rr);
+    setMesocycle(newMeso);
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
     setLoading(false);
     setWeekStart(nextWeek.weekStart);
@@ -349,6 +392,15 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mesocycle Completion Screen */}
+      {showMesoCompletion && completedMesocycle && user && (
+        <MesocycleCompletionScreen
+          mesocycle={completedMesocycle}
+          userId={user.id}
+          onStartNextMesocycle={handleStartNextMesocycle}
+        />
+      )}
     </div>
   );
 };
