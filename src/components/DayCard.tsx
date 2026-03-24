@@ -1,5 +1,6 @@
 import { Plus, Trash2, Settings2, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap, MessageSquare } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
+import ReadinessCheck from "@/components/ReadinessCheck";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
 import { DndContext, closestCenter, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
