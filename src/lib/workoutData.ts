@@ -364,6 +364,7 @@ export type DayLog = {
   day: string;
   exercises: ExerciseLog[];
   done?: boolean;
+  readiness?: number; // 1-5 readiness score
 };
 
 export type WeekLog = {

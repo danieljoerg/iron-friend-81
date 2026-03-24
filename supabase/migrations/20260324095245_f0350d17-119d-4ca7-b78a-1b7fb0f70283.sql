@@ -1,0 +1,1 @@
+ALTER TABLE public.workout_weeks ADD COLUMN readiness jsonb DEFAULT '{}'::jsonb;

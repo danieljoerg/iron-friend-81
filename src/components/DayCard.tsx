@@ -1,5 +1,6 @@
 import { Plus, Trash2, Settings2, Check, ChevronDown, Youtube, X, Link, GripVertical, Zap, MessageSquare } from "lucide-react";
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
+import ReadinessCheck from "@/components/ReadinessCheck";
 import { useState, useMemo } from "react";
 import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
 import { DndContext, closestCenter, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -64,7 +65,8 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
   const [editingNote, setEditingNote] = useState<number | null>(null);
-
+  const [showReadiness, setShowReadiness] = useState(false);
+  const [pendingSetDone, setPendingSetDone] = useState<{ exIdx: number; setIdx: number } | null>(null);
   const totalVolume = dayLog.exercises.reduce((sum, e) => sum + calculateVolume(e), 0);
 
   const sensors = useSensors(
@@ -115,11 +117,33 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   };
 
   const toggleSetDone = (exIdx: number, setIdx: number) => {
+    const set = dayLog.exercises[exIdx].sets[setIdx];
+    // If marking a set done (not undoing) and no readiness yet, show readiness check
+    if (!set.done && !dayLog.readiness) {
+      setPendingSetDone({ exIdx, setIdx });
+      setShowReadiness(true);
+      return;
+    }
     const exercises = [...dayLog.exercises];
     const sets = [...exercises[exIdx].sets];
     sets[setIdx] = { ...sets[setIdx], done: !sets[setIdx].done };
     exercises[exIdx] = { ...exercises[exIdx], sets };
     onChange({ ...dayLog, exercises });
+  };
+
+  const handleReadinessSelect = (value: number) => {
+    setShowReadiness(false);
+    const updated = { ...dayLog, readiness: value };
+    // If there was a pending set done, complete it now
+    if (pendingSetDone) {
+      const exercises = [...updated.exercises];
+      const sets = [...exercises[pendingSetDone.exIdx].sets];
+      sets[pendingSetDone.setIdx] = { ...sets[pendingSetDone.setIdx], done: true };
+      exercises[pendingSetDone.exIdx] = { ...exercises[pendingSetDone.exIdx], sets };
+      updated.exercises = exercises;
+      setPendingSetDone(null);
+    }
+    onChange(updated);
   };
 
   const addSet = (exIdx: number) => {
@@ -200,6 +224,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
           {dayDone && (
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
               Done
+            </span>
+          )}
+          {dayLog.readiness && (
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {["", "😫", "😮‍💨", "😐", "😊", "🔥"][dayLog.readiness]}
             </span>
           )}
           {isRestDay && !dayDone && dayLog.exercises.length === 0 && (
@@ -623,6 +652,14 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
         </button>
       )}
       </div>}
+
+      {/* Readiness Check Dialog */}
+      <ReadinessCheck
+        day={dayLog.day}
+        open={showReadiness}
+        onSelect={handleReadinessSelect}
+        onCancel={() => { setShowReadiness(false); setPendingSetDone(null); }}
+      />
 
       {/* YouTube Video Overlay */}
       {videoOverlay && (
