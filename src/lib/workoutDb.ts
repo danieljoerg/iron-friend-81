@@ -375,7 +375,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     }
   }
 
-  // Get days_done and training_days from week record
+  // Get days_done, training_days, and readiness from week record
   const { data: weekMeta } = await supabase
     .from("workout_weeks")
     .select("*")
@@ -383,6 +383,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
     .single();
   const daysDone: string[] = ((weekMeta as any)?.days_done as string[]) || [];
   const weekTrainingDays: string[] | null = (weekMeta as any)?.training_days ?? null;
+  const readinessMap: Record<string, number> = ((weekMeta as any)?.readiness as Record<string, number>) || {};
 
   // Build the WeekLog structure, deduplicating exercises by day+sort_order
   const days: DayLog[] = FULL_DAYS.map((day) => {
@@ -401,7 +402,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
         supersetWithNext: (e as any).superset_with_next || false,
         note: (e as any).note || undefined,
       }));
-    return { day, exercises: dayExercises, done: daysDone.includes(day) };
+    return { day, exercises: dayExercises, done: daysDone.includes(day), readiness: readinessMap[day] };
   });
 
   return { weekStart, days, trainingDays: weekTrainingDays };
