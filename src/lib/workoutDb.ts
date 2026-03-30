@@ -114,6 +114,11 @@ export function computeTargets(
     : null;
 
   const allMaxed = prevSets.every((s) => s.reps >= max);
+  const getNextRepTarget = (currentReps: number, step: number) => {
+    // If actual performance is already above configured max, never regress it
+    if (currentReps >= max) return currentReps;
+    return Math.min(currentReps + step, max);
+  };
 
   return prevSets.map((s) => {
     if (s.reps === 0 && s.kg === 0) return { reps: min, kg: 0 };
@@ -130,11 +135,11 @@ export function computeTargets(
 
     // Lots of reserve (RIR >= 3) → push +2 reps instead of +1
     if (avgRir !== null && avgRir >= 3) {
-      return { reps: Math.min(s.reps + 2, max), kg: s.kg };
+      return { reps: getNextRepTarget(s.reps, 2), kg: s.kg };
     }
 
     // Standard: +1 rep
-    return { reps: Math.min(s.reps + 1, max), kg: s.kg };
+    return { reps: getNextRepTarget(s.reps, 1), kg: s.kg };
   });
 }
 
