@@ -372,6 +372,23 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                       {name}
                     </button>
                   ))}
+                  {EXERCISES.filter((e) => matchesExerciseSearch(e, swapSearch)).length === 0 && swapSearch.trim().length > 0 && (
+                    <div className="p-2">
+                      <p className="text-xs text-muted-foreground mb-2">Keine Übung gefunden</p>
+                      <button
+                        onClick={() => {
+                          const exercises = [...dayLog.exercises];
+                          exercises[exIdx] = { ...exercises[exIdx], exercise: swapSearch.trim() };
+                          onChange({ ...dayLog, exercises });
+                          setSwappingIdx(null);
+                          setSwapSearch("");
+                        }}
+                        className="w-full text-left text-xs py-1.5 px-2 rounded bg-primary/10 hover:bg-primary/20 transition-colors text-primary font-medium"
+                      >
+                        + „{swapSearch.trim()}" als neue Übung
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => { setSwappingIdx(null); setSwapSearch(""); }}
@@ -632,8 +649,16 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                 {ex}
               </button>
             ))}
-            {filteredExercises.length === 0 && (
-              <p className="text-xs text-muted-foreground p-2">Keine Übung gefunden</p>
+            {filteredExercises.length === 0 && search.trim().length > 0 && (
+              <div className="p-2">
+                <p className="text-xs text-muted-foreground mb-2">Keine Übung gefunden</p>
+                <button
+                  onClick={() => { addExercise(search.trim()); setSearch(""); }}
+                  className="w-full text-left text-xs py-1.5 px-2 rounded bg-primary/10 hover:bg-primary/20 transition-colors text-primary font-medium"
+                >
+                  + „{search.trim()}" als neue Übung hinzufügen
+                </button>
+              </div>
             )}
           </div>
           <button
