@@ -77,6 +77,24 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
   const exerciseIds = useMemo(() => dayLog.exercises.map((_, i) => `ex-${i}`), [dayLog.exercises]);
 
+  const normalizeExerciseText = (value: string) => value
+    .toLowerCase()
+    .replace(/dumbell/g, "dumbbell")
+    .replace(/[()/-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const matchesExerciseSearch = (exerciseName: string, query: string) => {
+    const normalizedExercise = normalizeExerciseText(exerciseName);
+    const normalizedQuery = normalizeExerciseText(query);
+
+    if (!normalizedQuery) return true;
+    if (normalizedExercise.includes(normalizedQuery)) return true;
+
+    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+    return queryTokens.every((token) => normalizedExercise.includes(token));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -118,7 +136,6 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
   const toggleSetDone = (exIdx: number, setIdx: number) => {
     const set = dayLog.exercises[exIdx].sets[setIdx];
-    // If marking a set done (not undoing) and no readiness yet, show readiness check
     if (!set.done && !dayLog.readiness) {
       setPendingSetDone({ exIdx, setIdx });
       setShowReadiness(true);
@@ -134,7 +151,6 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
   const handleReadinessSelect = (value: number) => {
     setShowReadiness(false);
     const updated = { ...dayLog, readiness: value };
-    // If there was a pending set done, complete it now
     if (pendingSetDone) {
       const exercises = [...updated.exercises];
       const sets = [...exercises[pendingSetDone.exIdx].sets];
@@ -165,9 +181,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
     onChange({ ...dayLog, exercises });
   };
 
-  const filteredExercises = EXERCISES.filter((e) =>
-    e.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredExercises = EXERCISES.filter((e) => matchesExerciseSearch(e, search));
 
   const getRepColor = (reps: number, exercise: string) => {
     const range = repRanges?.[exercise];
