@@ -357,7 +357,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                   className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary mb-2"
                 />
                 <div className="max-h-36 overflow-y-auto">
-                  {EXERCISES.filter((e) => e.toLowerCase().includes(swapSearch.toLowerCase())).map((name) => (
+                  {EXERCISES.filter((e) => matchesExerciseSearch(e, swapSearch)).map((name) => (
                     <button
                       key={name}
                       onClick={() => {
