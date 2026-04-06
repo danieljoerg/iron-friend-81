@@ -90,6 +90,29 @@ export default function Auth() {
           >
             {isLogin ? "Noch kein Konto? Registrieren" : "Schon ein Konto? Einloggen"}
           </button>
+
+          {isLogin && (
+            <button
+              onClick={async () => {
+                if (!email) {
+                  setError("Bitte E-Mail eingeben");
+                  return;
+                }
+                setLoading(true);
+                setError(null);
+                setMessage(null);
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (error) setError(error.message);
+                else setMessage("Passwort-Reset Link wurde gesendet. Prüfe deine E-Mails!");
+                setLoading(false);
+              }}
+              className="mt-2 w-full text-center text-xs font-mono text-muted-foreground hover:text-primary transition-colors"
+            >
+              Passwort vergessen?
+            </button>
+          )}
         </div>
       </div>
     </div>
