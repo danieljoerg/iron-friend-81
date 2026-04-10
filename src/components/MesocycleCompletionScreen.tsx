@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield, Share2, Dumbbell } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield, Share2, Dumbbell, Check, Link } from "lucide-react";
 import { EXERCISE_MUSCLE_MAP, type MuscleGroup } from "@/lib/workoutData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
 import { formatDateString } from "@/lib/workoutData";
-import html2canvas from "html2canvas";
 
 interface MesocycleCompletionScreenProps {
   mesocycle: Mesocycle;
