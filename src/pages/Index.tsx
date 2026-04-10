@@ -112,6 +112,8 @@ const Index = () => {
   const allDaysDone = week.days.every(d => d.done || (!effectiveTrainingDays.includes(d.day) && d.exercises.length === 0));
   const hasAnyExercises = week.days.some(d => d.exercises.length > 0);
 
+  const [deloadCompleted, setDeloadCompleted] = useState(false);
+
   const handleCompleteWeek = async () => {
     if (!user) return;
     
@@ -142,6 +144,9 @@ const Index = () => {
 
     // If last meso week, show completion screen instead of navigating
     if (isLastMesoWeek && mesocycle) {
+      // Check if the deload week (this week) actually had exercises
+      const hadDeloadExercises = completedWeek.days.some(d => d.exercises.length > 0);
+      setDeloadCompleted(hadDeloadExercises);
       setCompletedMesocycle(mesocycle);
       setShowMesoCompletion(true);
       return;
