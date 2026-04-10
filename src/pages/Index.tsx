@@ -427,7 +427,9 @@ const Index = () => {
         <MesocycleCompletionScreen
           mesocycle={completedMesocycle}
           userId={user.id}
+          deloadCompleted={deloadCompleted}
           onStartNextMesocycle={handleStartNextMesocycle}
+          onDoDeloadFirst={handleDoDeloadFirst}
         />
       )}
     </div>
