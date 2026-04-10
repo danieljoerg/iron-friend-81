@@ -205,6 +205,30 @@ const Index = () => {
     setWeekStart(nextWeek.weekStart);
   };
 
+  const handleDoDeloadFirst = async () => {
+    if (!user) return;
+    setShowMesoCompletion(false);
+    setCompletedMesocycle(null);
+
+    // Prepare next week with deload targets (don't start a new mesocycle yet)
+    const completedWeek = week;
+    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+
+    const [prevData, rr] = await Promise.all([
+      getPreviousWeekData(nextWeek.weekStart, user.id),
+      getRepRangesDb(user.id),
+    ]);
+
+    fetchIdRef.current += 1;
+    setWeek(nextWeek);
+    setPrevWeekData(prevData);
+    setRepRanges(rr);
+    setMesocycle(mesocycle); // keep current mesocycle so deload styling applies
+    setWeekTrainingDays(nextWeek.trainingDays ?? null);
+    setLoading(false);
+    setWeekStart(nextWeek.weekStart);
+  };
+
   const handleToggleWeekDay = (day: string) => {
     const current = weekTrainingDays ?? [...defaultTrainingDays];
     const updated = current.includes(day)
