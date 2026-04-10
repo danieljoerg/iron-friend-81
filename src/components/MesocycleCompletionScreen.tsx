@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield } from "lucide-react";
 import { EXERCISE_MUSCLE_MAP, type MuscleGroup } from "@/lib/workoutData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Mesocycle } from "@/lib/workoutDb";
@@ -9,7 +9,9 @@ import { formatDateString } from "@/lib/workoutData";
 interface MesocycleCompletionScreenProps {
   mesocycle: Mesocycle;
   userId: string;
+  deloadCompleted: boolean;
   onStartNextMesocycle: () => void;
+  onDoDeloadFirst: () => void;
 }
 
 type MuscleVolumeChange = {
@@ -54,8 +56,6 @@ async function getMesocycleVolumeData(
   if (!exercises || exercises.length === 0) return { muscleChanges: [], overallChangePercent: 0 };
 
   // Find first training week and last non-deload training week with data
-  const firstWeek = weeks[0];
-  // Last non-deload week (deload = last week of meso)
   const trainingWeeks = weeks.filter((w) => {
     const info = getMesocycleWeekInfo(mesocycle, w.week_start);
     return info.isInMeso && !info.isDeload;
@@ -110,20 +110,34 @@ async function getMesocycleVolumeData(
   return { muscleChanges, overallChangePercent };
 }
 
-function getRecommendation(overallChange: number): string {
-  if (overallChange > 15) {
-    return "Empfehlung: Deload-Woche einlegen, dann Intensität erhöhen (Gewicht ↑, Volumen gleich)";
+function getRecommendation(overallChange: number, deloadCompleted: boolean): string {
+  if (deloadCompleted) {
+    // User already did the deload week
+    if (overallChange > 15) {
+      return "Starke Fortschritte! Nächster Mesozyklus: Intensität erhöhen (Gewicht ↑, Volumen gleich).";
+    }
+    if (overallChange >= 5) {
+      return "Gute Entwicklung! Nächster Mesozyklus: Volumen weiter steigern (+1 Set pro Hauptübung).";
+    }
+    return "Überprüfe dein Recovery und Ernährung für den nächsten Mesozyklus.";
+  } else {
+    // User skipped the deload week
+    if (overallChange > 15) {
+      return "Starke Fortschritte! Eine Deload-Woche hilft deinem Körper, sich zu erholen und stärker zurückzukommen.";
+    }
+    if (overallChange >= 5) {
+      return "Gute Entwicklung! Eine Deload-Woche vor dem nächsten Zyklus kann die Leistung weiter verbessern.";
+    }
+    return "Eine Deload-Woche wird empfohlen, um dein Recovery zu verbessern.";
   }
-  if (overallChange >= 5) {
-    return "Empfehlung: Volumen weiter steigern. Nächster Mesozyklus: +1 Set pro Hauptübung";
-  }
-  return "Empfehlung: Überprüfe dein Recovery. Erwäge Deload vor dem nächsten Mesozyklus.";
 }
 
 export default function MesocycleCompletionScreen({
   mesocycle,
   userId,
+  deloadCompleted,
   onStartNextMesocycle,
+  onDoDeloadFirst,
 }: MesocycleCompletionScreenProps) {
   const [loading, setLoading] = useState(true);
   const [muscleChanges, setMuscleChanges] = useState<MuscleVolumeChange[]>([]);
@@ -217,18 +231,39 @@ export default function MesocycleCompletionScreen({
             {/* Recommendation */}
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
               <p className="text-sm font-medium leading-relaxed">
-                {getRecommendation(overallChange)}
+                {getRecommendation(overallChange, deloadCompleted)}
               </p>
             </div>
 
-            {/* CTA */}
-            <button
-              onClick={onStartNextMesocycle}
-              className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-mono font-bold transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
-            >
-              Nächsten Mesozyklus starten
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {/* CTAs */}
+            {deloadCompleted ? (
+              /* Deload was done — single CTA */
+              <button
+                onClick={onStartNextMesocycle}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-mono font-bold transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+              >
+                Nächsten Mesozyklus starten
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              /* Deload was skipped — two options */
+              <div className="space-y-3">
+                <button
+                  onClick={onDoDeloadFirst}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-mono font-bold transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+                >
+                  <Shield className="w-4 h-4" />
+                  Erst Deload-Woche machen
+                </button>
+                <button
+                  onClick={onStartNextMesocycle}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-mono font-medium transition-all bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                >
+                  Deload überspringen → direkt neuer Mesozyklus
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

@@ -112,6 +112,8 @@ const Index = () => {
   const allDaysDone = week.days.every(d => d.done || (!effectiveTrainingDays.includes(d.day) && d.exercises.length === 0));
   const hasAnyExercises = week.days.some(d => d.exercises.length > 0);
 
+  const [deloadCompleted, setDeloadCompleted] = useState(false);
+
   const handleCompleteWeek = async () => {
     if (!user) return;
     
@@ -142,6 +144,9 @@ const Index = () => {
 
     // If last meso week, show completion screen instead of navigating
     if (isLastMesoWeek && mesocycle) {
+      // Check if the deload week (this week) actually had exercises
+      const hadDeloadExercises = completedWeek.days.some(d => d.exercises.length > 0);
+      setDeloadCompleted(hadDeloadExercises);
       setCompletedMesocycle(mesocycle);
       setShowMesoCompletion(true);
       return;
@@ -195,6 +200,30 @@ const Index = () => {
     setPrevWeekData(prevData);
     setRepRanges(rr);
     setMesocycle(newMeso);
+    setWeekTrainingDays(nextWeek.trainingDays ?? null);
+    setLoading(false);
+    setWeekStart(nextWeek.weekStart);
+  };
+
+  const handleDoDeloadFirst = async () => {
+    if (!user) return;
+    setShowMesoCompletion(false);
+    setCompletedMesocycle(null);
+
+    // Prepare next week with deload targets (don't start a new mesocycle yet)
+    const completedWeek = week;
+    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+
+    const [prevData, rr] = await Promise.all([
+      getPreviousWeekData(nextWeek.weekStart, user.id),
+      getRepRangesDb(user.id),
+    ]);
+
+    fetchIdRef.current += 1;
+    setWeek(nextWeek);
+    setPrevWeekData(prevData);
+    setRepRanges(rr);
+    setMesocycle(mesocycle); // keep current mesocycle so deload styling applies
     setWeekTrainingDays(nextWeek.trainingDays ?? null);
     setLoading(false);
     setWeekStart(nextWeek.weekStart);
@@ -398,7 +427,9 @@ const Index = () => {
         <MesocycleCompletionScreen
           mesocycle={completedMesocycle}
           userId={user.id}
+          deloadCompleted={deloadCompleted}
           onStartNextMesocycle={handleStartNextMesocycle}
+          onDoDeloadFirst={handleDoDeloadFirst}
         />
       )}
     </div>
