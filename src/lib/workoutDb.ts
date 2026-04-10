@@ -650,6 +650,89 @@ export async function getMuscleGroupProgressDb(
     .filter((d) => d.volume > 0);
 }
 
+export type MesocycleComparison = {
+  mesoIndex: number;
+  label: string;
+  startWeek: string;
+  totalVolume: number;
+  maxWeight: number;
+  avgWeeklyVolume: number;
+  peakWeekVolume: number;
+  weeks: number;
+};
+
+export async function getMesocycleComparisonDb(userId: string): Promise<MesocycleComparison[]> {
+  // Get all mesocycles ordered by start
+  const { data: mesos } = await supabase
+    .from("mesocycles")
+    .select("*")
+    .eq("user_id", userId)
+    .order("start_week", { ascending: true });
+
+  if (!mesos || mesos.length === 0) return [];
+
+  // Get all weeks and exercises
+  const { data: weeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId)
+    .order("week_start");
+
+  if (!weeks || weeks.length === 0) return [];
+
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("week_id, sets")
+    .eq("user_id", userId);
+
+  if (!exercises) return [];
+
+  return mesos.map((meso, idx) => {
+    const mesoStart = new Date(meso.start_week + "T00:00:00");
+    const durationWeeks = meso.duration_weeks;
+
+    // Find weeks belonging to this mesocycle (excluding deload = last week)
+    const mesoWeeks = weeks.filter((w) => {
+      const ws = new Date(w.week_start + "T00:00:00");
+      const diffMs = ws.getTime() - mesoStart.getTime();
+      const weekNum = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
+      return weekNum >= 1 && weekNum < durationWeeks; // exclude deload week
+    });
+
+    let totalVolume = 0;
+    let maxWeight = 0;
+    let peakWeekVolume = 0;
+
+    mesoWeeks.forEach((w) => {
+      const weekExs = exercises.filter((e) => e.week_id === w.id);
+      let weekVol = 0;
+      weekExs.forEach((e) => {
+        ((e.sets as any[]) || []).forEach((s: any) => {
+          const vol = (s.reps || 0) * (s.kg || 0);
+          weekVol += vol;
+          if (s.kg > maxWeight) maxWeight = s.kg;
+        });
+      });
+      totalVolume += weekVol;
+      if (weekVol > peakWeekVolume) peakWeekVolume = weekVol;
+    });
+
+    const trainingWeeks = mesoWeeks.length || 1;
+    const startDate = mesoStart.toLocaleDateString("de-CH", { month: "short", day: "numeric" });
+
+    return {
+      mesoIndex: idx + 1,
+      label: `Meso ${idx + 1}`,
+      startWeek: meso.start_week,
+      totalVolume,
+      maxWeight,
+      avgWeeklyVolume: Math.round(totalVolume / trainingWeeks),
+      peakWeekVolume,
+      weeks: trainingWeeks,
+    };
+  });
+}
+
 export async function getOverallProgressDb(
   userId: string
 ): Promise<{ week: string; volume: number; maxWeight: number }[]> {
