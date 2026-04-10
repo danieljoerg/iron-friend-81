@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield, Share2, Dumbbell } from "lucide-react";
 import { EXERCISE_MUSCLE_MAP, type MuscleGroup } from "@/lib/workoutData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
 import { formatDateString } from "@/lib/workoutData";
+import html2canvas from "html2canvas";
 
 interface MesocycleCompletionScreenProps {
   mesocycle: Mesocycle;
@@ -14,18 +15,33 @@ interface MesocycleCompletionScreenProps {
   onDoDeloadFirst: () => void;
 }
 
-type MuscleVolumeChange = {
+type MuscleDetail = {
   muscle: string;
   startVolume: number;
   endVolume: number;
   changePercent: number;
+  startMaxWeight: number;
+  endMaxWeight: number;
+  weightChange: number;
+  totalSets: number;
+  topExercise: string;
+  topExerciseEndVol: number;
 };
 
-async function getMesocycleVolumeData(
+type MesoSummary = {
+  muscleDetails: MuscleDetail[];
+  overallChangePercent: number;
+  totalVolume: number;
+  totalSets: number;
+  trainingWeeks: number;
+  overallMaxWeight: number;
+  bestMuscle: string | null;
+};
+
+async function getMesocycleDetailedData(
   mesocycle: Mesocycle,
   userId: string
-): Promise<{ muscleChanges: MuscleVolumeChange[]; overallChangePercent: number }> {
-  // Get all weeks in this mesocycle
+): Promise<MesoSummary> {
   const startDate = new Date(mesocycle.start_week + "T00:00:00");
   const allWeekStarts: string[] = [];
   for (let i = 0; i < mesocycle.duration_weeks; i++) {
@@ -34,7 +50,6 @@ async function getMesocycleVolumeData(
     allWeekStarts.push(formatDateString(d));
   }
 
-  // Fetch week rows
   const { data: weeks } = await supabase
     .from("workout_weeks")
     .select("id, week_start")
@@ -42,92 +57,127 @@ async function getMesocycleVolumeData(
     .in("week_start", allWeekStarts)
     .order("week_start");
 
-  if (!weeks || weeks.length < 2) return { muscleChanges: [], overallChangePercent: 0 };
+  if (!weeks || weeks.length < 2)
+    return { muscleDetails: [], overallChangePercent: 0, totalVolume: 0, totalSets: 0, trainingWeeks: 0, overallMaxWeight: 0, bestMuscle: null };
 
   const weekIds = weeks.map((w) => w.id);
 
-  // Fetch all exercises for these weeks
   const { data: exercises } = await supabase
     .from("workout_exercises")
     .select("week_id, exercise, sets")
     .eq("user_id", userId)
     .in("week_id", weekIds);
 
-  if (!exercises || exercises.length === 0) return { muscleChanges: [], overallChangePercent: 0 };
+  if (!exercises || exercises.length === 0)
+    return { muscleDetails: [], overallChangePercent: 0, totalVolume: 0, totalSets: 0, trainingWeeks: 0, overallMaxWeight: 0, bestMuscle: null };
 
-  // Find first training week and last non-deload training week with data
   const trainingWeeks = weeks.filter((w) => {
     const info = getMesocycleWeekInfo(mesocycle, w.week_start);
     return info.isInMeso && !info.isDeload;
   });
 
-  const firstTrainingWeek = trainingWeeks[0];
-  const lastTrainingWeek = trainingWeeks[trainingWeeks.length - 1];
+  const firstWeek = trainingWeeks[0];
+  const lastWeek = trainingWeeks[trainingWeeks.length - 1];
 
-  if (!firstTrainingWeek || !lastTrainingWeek || firstTrainingWeek.id === lastTrainingWeek.id) {
-    return { muscleChanges: [], overallChangePercent: 0 };
-  }
+  if (!firstWeek || !lastWeek || firstWeek.id === lastWeek.id)
+    return { muscleDetails: [], overallChangePercent: 0, totalVolume: 0, totalSets: 0, trainingWeeks: trainingWeeks.length, overallMaxWeight: 0, bestMuscle: null };
 
-  // Calculate volume per muscle group for first and last training weeks
-  const calcMuscleVolumes = (weekId: string): Record<string, number> => {
+  // Per-week, per-muscle volume and max weight
+  const calcWeekData = (weekId: string) => {
     const volumes: Record<string, number> = {};
+    const maxWeights: Record<string, number> = {};
+    const exVolumes: Record<string, Record<string, number>> = {}; // muscle -> exercise -> volume
     const weekExs = exercises.filter((e) => e.week_id === weekId);
     weekExs.forEach((e) => {
       const muscle = EXERCISE_MUSCLE_MAP[e.exercise];
       if (!muscle) return;
-      const vol = ((e.sets as any[]) || []).reduce(
-        (sum: number, s: any) => sum + (s.reps || 0) * (s.kg || 0),
-        0
-      );
+      const sets = (e.sets as any[]) || [];
+      let vol = 0;
+      sets.forEach((s: any) => {
+        vol += (s.reps || 0) * (s.kg || 0);
+        if ((s.kg || 0) > (maxWeights[muscle] || 0)) maxWeights[muscle] = s.kg;
+      });
       volumes[muscle] = (volumes[muscle] || 0) + vol;
+      if (!exVolumes[muscle]) exVolumes[muscle] = {};
+      exVolumes[muscle][e.exercise] = (exVolumes[muscle][e.exercise] || 0) + vol;
     });
-    return volumes;
+    return { volumes, maxWeights, exVolumes };
   };
 
-  const startVols = calcMuscleVolumes(firstTrainingWeek.id);
-  const endVols = calcMuscleVolumes(lastTrainingWeek.id);
+  const startData = calcWeekData(firstWeek.id);
+  const endData = calcWeekData(lastWeek.id);
 
-  // All muscles that appear in either week
-  const allMuscles = new Set([...Object.keys(startVols), ...Object.keys(endVols)]);
-  const muscleChanges: MuscleVolumeChange[] = [];
-
-  allMuscles.forEach((muscle) => {
-    const sv = startVols[muscle] || 0;
-    const ev = endVols[muscle] || 0;
-    if (sv === 0 && ev === 0) return;
-    const change = sv > 0 ? ((ev - sv) / sv) * 100 : ev > 0 ? 100 : 0;
-    muscleChanges.push({ muscle, startVolume: sv, endVolume: ev, changePercent: Math.round(change) });
+  // Total stats across all training weeks
+  let totalVolume = 0;
+  let totalSets = 0;
+  let overallMaxWeight = 0;
+  const trainingWeekIds = new Set(trainingWeeks.map((w) => w.id));
+  exercises.forEach((e) => {
+    if (!trainingWeekIds.has(e.week_id)) return;
+    const sets = (e.sets as any[]) || [];
+    sets.forEach((s: any) => {
+      totalVolume += (s.reps || 0) * (s.kg || 0);
+      totalSets++;
+      if ((s.kg || 0) > overallMaxWeight) overallMaxWeight = s.kg;
+    });
   });
 
-  // Sort by absolute change descending
-  muscleChanges.sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent));
+  const allMuscles = new Set([...Object.keys(startData.volumes), ...Object.keys(endData.volumes)]);
+  const muscleDetails: MuscleDetail[] = [];
 
-  // Overall
-  const totalStart = Object.values(startVols).reduce((s, v) => s + v, 0);
-  const totalEnd = Object.values(endVols).reduce((s, v) => s + v, 0);
+  allMuscles.forEach((muscle) => {
+    const sv = startData.volumes[muscle] || 0;
+    const ev = endData.volumes[muscle] || 0;
+    if (sv === 0 && ev === 0) return;
+    const change = sv > 0 ? ((ev - sv) / sv) * 100 : ev > 0 ? 100 : 0;
+    const smw = startData.maxWeights[muscle] || 0;
+    const emw = endData.maxWeights[muscle] || 0;
+
+    // Find top exercise by end volume
+    const endExVols = endData.exVolumes[muscle] || {};
+    const topEx = Object.entries(endExVols).sort((a, b) => b[1] - a[1])[0];
+
+    // Count total sets for this muscle across all training weeks
+    let muscleSets = 0;
+    exercises.forEach((e) => {
+      if (!trainingWeekIds.has(e.week_id)) return;
+      if (EXERCISE_MUSCLE_MAP[e.exercise] !== muscle) return;
+      muscleSets += ((e.sets as any[]) || []).length;
+    });
+
+    muscleDetails.push({
+      muscle,
+      startVolume: Math.round(sv),
+      endVolume: Math.round(ev),
+      changePercent: Math.round(change),
+      startMaxWeight: smw,
+      endMaxWeight: emw,
+      weightChange: emw - smw,
+      totalSets: muscleSets,
+      topExercise: topEx ? topEx[0] : "",
+      topExerciseEndVol: topEx ? Math.round(topEx[1]) : 0,
+    });
+  });
+
+  muscleDetails.sort((a, b) => b.changePercent - a.changePercent);
+
+  const totalStart = Object.values(startData.volumes).reduce((s, v) => s + v, 0);
+  const totalEnd = Object.values(endData.volumes).reduce((s, v) => s + v, 0);
   const overallChangePercent = totalStart > 0 ? Math.round(((totalEnd - totalStart) / totalStart) * 100) : 0;
 
-  return { muscleChanges, overallChangePercent };
+  const bestMuscle = muscleDetails.length > 0 ? muscleDetails[0].muscle : null;
+
+  return { muscleDetails, overallChangePercent, totalVolume: Math.round(totalVolume), totalSets, trainingWeeks: trainingWeeks.length, overallMaxWeight, bestMuscle };
 }
 
 function getRecommendation(overallChange: number, deloadCompleted: boolean): string {
   if (deloadCompleted) {
-    // User already did the deload week
-    if (overallChange > 15) {
-      return "Starke Fortschritte! Nächster Mesozyklus: Intensität erhöhen (Gewicht ↑, Volumen gleich).";
-    }
-    if (overallChange >= 5) {
-      return "Gute Entwicklung! Nächster Mesozyklus: Volumen weiter steigern (+1 Set pro Hauptübung).";
-    }
+    if (overallChange > 15) return "Starke Fortschritte! Nächster Mesozyklus: Intensität erhöhen (Gewicht ↑, Volumen gleich).";
+    if (overallChange >= 5) return "Gute Entwicklung! Nächster Mesozyklus: Volumen weiter steigern (+1 Set pro Hauptübung).";
     return "Überprüfe dein Recovery und Ernährung für den nächsten Mesozyklus.";
   } else {
-    // User skipped the deload week
-    if (overallChange > 15) {
-      return "Starke Fortschritte! Eine Deload-Woche hilft deinem Körper, sich zu erholen und stärker zurückzukommen.";
-    }
-    if (overallChange >= 5) {
-      return "Gute Entwicklung! Eine Deload-Woche vor dem nächsten Zyklus kann die Leistung weiter verbessern.";
-    }
+    if (overallChange > 15) return "Starke Fortschritte! Eine Deload-Woche hilft deinem Körper, sich zu erholen und stärker zurückzukommen.";
+    if (overallChange >= 5) return "Gute Entwicklung! Eine Deload-Woche vor dem nächsten Zyklus kann die Leistung weiter verbessern.";
     return "Eine Deload-Woche wird empfohlen, um dein Recovery zu verbessern.";
   }
 }
@@ -140,94 +190,168 @@ export default function MesocycleCompletionScreen({
   onDoDeloadFirst,
 }: MesocycleCompletionScreenProps) {
   const [loading, setLoading] = useState(true);
-  const [muscleChanges, setMuscleChanges] = useState<MuscleVolumeChange[]>([]);
-  const [overallChange, setOverallChange] = useState(0);
+  const [summary, setSummary] = useState<MesoSummary | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getMesocycleVolumeData(mesocycle, userId).then((data) => {
-      setMuscleChanges(data.muscleChanges);
-      setOverallChange(data.overallChangePercent);
+    getMesocycleDetailedData(mesocycle, userId).then((data) => {
+      setSummary(data);
       setLoading(false);
     });
   }, [mesocycle, userId]);
 
+  const handleShare = async () => {
+    if (!shareRef.current) return;
+    setSharing(true);
+    try {
+      const canvas = await html2canvas(shareRef.current, {
+        backgroundColor: "#0a0a0f",
+        scale: 2,
+        useCORS: true,
+      });
+      canvas.toBlob(async (blob) => {
+        if (!blob) { setSharing(false); return; }
+        const file = new File([blob], "mesocycle-results.png", { type: "image/png" });
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: "Mein Mesozyklus-Ergebnis", text: "Schau dir meine Fortschritte an! 💪" });
+          } catch { /* user cancelled */ }
+        } else {
+          // Fallback: download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "mesocycle-results.png";
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        setSharing(false);
+      }, "image/png");
+    } catch {
+      setSharing(false);
+    }
+  };
+
+  const s = summary;
+  const overallChange = s?.overallChangePercent ?? 0;
+
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-lg space-y-6 overflow-y-auto max-h-[90vh] py-8">
-        {/* Title */}
-        <div className="text-center space-y-2">
-          <Trophy className="w-10 h-10 text-primary mx-auto" />
-          <h2 className="text-2xl font-heading font-bold">
-            Mesozyklus abgeschlossen 🏁
-          </h2>
-          <p className="text-sm text-muted-foreground font-mono">
-            {mesocycle.duration_weeks} Wochen · {mesocycle.start_week}
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="w-full max-w-lg overflow-y-auto max-h-[90vh] py-4">
+        {/* Shareable area */}
+        <div ref={shareRef} className="space-y-5 bg-background rounded-2xl p-5">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <Trophy className="w-10 h-10 text-primary mx-auto" />
+            <h2 className="text-2xl font-heading font-bold">Mesozyklus abgeschlossen 🏁</h2>
+            <p className="text-sm text-muted-foreground font-mono">
+              {mesocycle.duration_weeks} Wochen · ab {new Date(mesocycle.start_week + "T00:00:00").toLocaleDateString("de-CH", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
           </div>
-        ) : (
-          <>
-            {/* Volume Progress */}
-            {muscleChanges.length > 0 && (
-              <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
-                  Volume Progress
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {muscleChanges.map((mc) => (
-                    <div
-                      key={mc.muscle}
-                      className="flex items-center gap-1 bg-secondary rounded-full px-3 py-1.5"
-                    >
-                      <span className="text-xs font-medium">{mc.muscle}</span>
-                      {mc.changePercent > 0 ? (
-                        <ArrowUp className="w-3 h-3 text-green-400" />
-                      ) : mc.changePercent < 0 ? (
-                        <ArrowDown className="w-3 h-3 text-red-400" />
-                      ) : (
-                        <Minus className="w-3 h-3 text-muted-foreground" />
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : s && (
+            <>
+              {/* Headline stats */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                  <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Gesamt Vol.</p>
+                  <p className="font-mono text-lg font-bold text-foreground">{(s.totalVolume / 1000).toFixed(0)}t</p>
+                </div>
+                <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                  <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Total Sets</p>
+                  <p className="font-mono text-lg font-bold text-foreground">{s.totalSets}</p>
+                </div>
+                <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                  <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Max Gewicht</p>
+                  <p className="font-mono text-lg font-bold text-foreground">{s.overallMaxWeight}kg</p>
+                </div>
+              </div>
+
+              {/* Overall change badge */}
+              <div className="flex items-center justify-center">
+                <div className={`inline-flex items-center gap-2 rounded-full px-5 py-2 font-mono font-bold text-sm ${overallChange > 0 ? "bg-primary/15 text-primary" : overallChange < 0 ? "bg-destructive/15 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                  {overallChange > 0 ? <ArrowUp className="w-4 h-4" /> : overallChange < 0 ? <ArrowDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+                  Volumen {overallChange > 0 ? "+" : ""}{overallChange}% gestiegen
+                </div>
+              </div>
+
+              {/* Per-muscle detailed cards */}
+              {s.muscleDetails.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                    Fortschritt pro Muskelgruppe
+                  </h3>
+                  {s.muscleDetails.map((md) => (
+                    <div key={md.muscle} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                      {/* Muscle header with change */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Dumbbell className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm font-bold">{md.muscle}</span>
+                        </div>
+                        <span className={`font-mono text-sm font-bold ${md.changePercent > 0 ? "text-primary" : md.changePercent < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                          {md.changePercent > 0 ? "+" : ""}{md.changePercent}%
+                        </span>
+                      </div>
+
+                      {/* Detail row */}
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-[9px] font-mono text-muted-foreground uppercase">Volumen</p>
+                          <p className="text-xs font-mono">
+                            <span className="text-muted-foreground">{md.startVolume.toLocaleString()}</span>
+                            <span className="text-muted-foreground mx-0.5">→</span>
+                            <span className="font-bold text-foreground">{md.endVolume.toLocaleString()}</span>
+                            <span className="text-muted-foreground text-[9px]"> kg</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono text-muted-foreground uppercase">Max Gew.</p>
+                          <p className="text-xs font-mono">
+                            <span className="text-muted-foreground">{md.startMaxWeight}</span>
+                            <span className="text-muted-foreground mx-0.5">→</span>
+                            <span className="font-bold text-foreground">{md.endMaxWeight}</span>
+                            <span className="text-muted-foreground text-[9px]"> kg</span>
+                            {md.weightChange !== 0 && (
+                              <span className={`ml-1 text-[9px] font-bold ${md.weightChange > 0 ? "text-primary" : "text-destructive"}`}>
+                                {md.weightChange > 0 ? "+" : ""}{md.weightChange}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono text-muted-foreground uppercase">Sets</p>
+                          <p className="text-xs font-mono font-bold text-foreground">{md.totalSets}</p>
+                        </div>
+                      </div>
+
+                      {/* Top exercise */}
+                      {md.topExercise && (
+                        <p className="text-[10px] font-mono text-muted-foreground">
+                          Top: {md.topExercise}
+                        </p>
                       )}
-                      <span
-                        className={`text-xs font-mono font-bold ${
-                          mc.changePercent > 0
-                            ? "text-green-400"
-                            : mc.changePercent < 0
-                            ? "text-red-400"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {mc.changePercent > 0 ? "+" : ""}
-                        {mc.changePercent}%
-                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="pt-2 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-muted-foreground">
-                      Gesamt
-                    </span>
-                    <span
-                      className={`text-sm font-mono font-bold ${
-                        overallChange > 0
-                          ? "text-green-400"
-                          : overallChange < 0
-                          ? "text-red-400"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {overallChange > 0 ? "+" : ""}
-                      {overallChange}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
 
+              {/* Branding for shared image */}
+              <p className="text-center text-[10px] font-mono text-muted-foreground/50">
+                Lift Log · Progressive Overload Tracker
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Actions (outside shareable area) */}
+        {!loading && s && (
+          <div className="space-y-3 mt-5">
             {/* Recommendation */}
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
               <p className="text-sm font-medium leading-relaxed">
@@ -235,9 +359,18 @@ export default function MesocycleCompletionScreen({
               </p>
             </div>
 
+            {/* Share button */}
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+            >
+              <Share2 className="w-4 h-4" />
+              {sharing ? "Wird erstellt..." : "Ergebnis teilen"}
+            </button>
+
             {/* CTAs */}
             {deloadCompleted ? (
-              /* Deload was done — single CTA */
               <button
                 onClick={onStartNextMesocycle}
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-mono font-bold transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
@@ -246,8 +379,7 @@ export default function MesocycleCompletionScreen({
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
-              /* Deload was skipped — two options */
-              <div className="space-y-3">
+              <>
                 <button
                   onClick={onDoDeloadFirst}
                   className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-mono font-bold transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
@@ -262,9 +394,9 @@ export default function MesocycleCompletionScreen({
                   Deload überspringen → direkt neuer Mesozyklus
                   <ChevronRight className="w-3 h-3" />
                 </button>
-              </div>
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
