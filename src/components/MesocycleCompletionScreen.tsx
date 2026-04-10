@@ -386,9 +386,35 @@ export default function MesocycleCompletionScreen({
               disabled={sharing}
               className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
             >
-              <Share2 className="w-4 h-4" />
-              {sharing ? "Wird erstellt..." : "Ergebnis teilen"}
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 text-primary" />
+                  Link kopiert!
+                </>
+              ) : sharing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                  Wird erstellt...
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" />
+                  Share with your Gym Buddy 💪
+                </>
+              )}
             </button>
+            {shareUrl && !copied && (
+              <div className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2">
+                <Link className="w-3 h-3 text-muted-foreground shrink-0" />
+                <p className="text-[10px] font-mono text-muted-foreground truncate flex-1">{shareUrl}</p>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 3000); }}
+                  className="text-[10px] font-mono text-primary shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            )}
 
             {/* CTAs */}
             {deloadCompleted ? (
