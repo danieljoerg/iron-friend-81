@@ -261,7 +261,7 @@ export default function MesocycleCompletionScreen({
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
       <div className="w-full max-w-lg overflow-y-auto max-h-[90vh] py-4">
         {/* Shareable area */}
-        <div ref={shareRef} className="space-y-5 bg-background rounded-2xl p-5">
+        <div className="space-y-5 bg-background rounded-2xl p-5">
           {/* Header */}
           <div className="text-center space-y-2">
             <Trophy className="w-10 h-10 text-primary mx-auto" />
