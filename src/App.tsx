@@ -37,6 +37,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthRoute />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/shared/:id" element={<SharedResult />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
