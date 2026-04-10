@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield, Share2, Dumbbell } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus, Trophy, ChevronRight, Shield, Share2, Dumbbell, Check, Link } from "lucide-react";
 import { EXERCISE_MUSCLE_MAP, type MuscleGroup } from "@/lib/workoutData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
 import { formatDateString } from "@/lib/workoutData";
-import html2canvas from "html2canvas";
 
 interface MesocycleCompletionScreenProps {
   mesocycle: Mesocycle;
   userId: string;
+  displayName?: string | null;
   deloadCompleted: boolean;
   onStartNextMesocycle: () => void;
   onDoDeloadFirst: () => void;
@@ -185,6 +185,7 @@ function getRecommendation(overallChange: number, deloadCompleted: boolean): str
 export default function MesocycleCompletionScreen({
   mesocycle,
   userId,
+  displayName,
   deloadCompleted,
   onStartNextMesocycle,
   onDoDeloadFirst,
@@ -192,7 +193,8 @@ export default function MesocycleCompletionScreen({
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<MesoSummary | null>(null);
   const [sharing, setSharing] = useState(false);
-  const shareRef = useRef<HTMLDivElement>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     getMesocycleDetailedData(mesocycle, userId).then((data) => {
@@ -202,35 +204,54 @@ export default function MesocycleCompletionScreen({
   }, [mesocycle, userId]);
 
   const handleShare = async () => {
-    if (!shareRef.current) return;
+    if (!summary) return;
     setSharing(true);
     try {
-      const canvas = await html2canvas(shareRef.current, {
-        backgroundColor: "#0a0a0f",
-        scale: 2,
-        useCORS: true,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) { setSharing(false); return; }
-        const file = new File([blob], "mesocycle-results.png", { type: "image/png" });
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file], title: "Mein Mesozyklus-Ergebnis", text: "Schau dir meine Fortschritte an! 💪" });
-          } catch { /* user cancelled */ }
-        } else {
-          // Fallback: download
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "mesocycle-results.png";
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+      // Save to DB
+      const { data, error } = await supabase
+        .from("shared_mesocycle_results")
+        .insert({
+          user_id: userId,
+          display_name: displayName || null,
+          duration_weeks: mesocycle.duration_weeks,
+          start_week: mesocycle.start_week,
+          total_volume: summary.totalVolume,
+          total_sets: summary.totalSets,
+          overall_max_weight: summary.overallMaxWeight,
+          overall_change_percent: summary.overallChangePercent,
+          muscle_details: summary.muscleDetails,
+        } as any)
+        .select("id")
+        .single();
+
+      if (error || !data) {
+        console.error("Failed to share:", error);
         setSharing(false);
-      }, "image/png");
-    } catch {
-      setSharing(false);
+        return;
+      }
+
+      const url = `${window.location.origin}/shared/${data.id}`;
+      setShareUrl(url);
+
+      // Try native share
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "Mein Mesozyklus-Ergebnis 💪",
+            text: `Schau dir meine Fortschritte an: ${summary.overallChangePercent > 0 ? "+" : ""}${summary.overallChangePercent}% Volumen-Steigerung!`,
+            url,
+          });
+        } catch { /* user cancelled */ }
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      }
+    } catch (err) {
+      console.error("Share error:", err);
     }
+    setSharing(false);
   };
 
   const s = summary;
@@ -240,7 +261,7 @@ export default function MesocycleCompletionScreen({
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
       <div className="w-full max-w-lg overflow-y-auto max-h-[90vh] py-4">
         {/* Shareable area */}
-        <div ref={shareRef} className="space-y-5 bg-background rounded-2xl p-5">
+        <div className="space-y-5 bg-background rounded-2xl p-5">
           {/* Header */}
           <div className="text-center space-y-2">
             <Trophy className="w-10 h-10 text-primary mx-auto" />
@@ -365,9 +386,35 @@ export default function MesocycleCompletionScreen({
               disabled={sharing}
               className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-mono font-medium transition-all bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
             >
-              <Share2 className="w-4 h-4" />
-              {sharing ? "Wird erstellt..." : "Ergebnis teilen"}
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 text-primary" />
+                  Link kopiert!
+                </>
+              ) : sharing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                  Wird erstellt...
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" />
+                  Share with your Gym Buddy 💪
+                </>
+              )}
             </button>
+            {shareUrl && !copied && (
+              <div className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2">
+                <Link className="w-3 h-3 text-muted-foreground shrink-0" />
+                <p className="text-[10px] font-mono text-muted-foreground truncate flex-1">{shareUrl}</p>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 3000); }}
+                  className="text-[10px] font-mono text-primary shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            )}
 
             {/* CTAs */}
             {deloadCompleted ? (

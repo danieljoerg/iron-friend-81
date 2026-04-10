@@ -116,6 +116,48 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_mesocycle_results: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          duration_weeks: number
+          id: string
+          muscle_details: Json
+          overall_change_percent: number
+          overall_max_weight: number
+          start_week: string
+          total_sets: number
+          total_volume: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          duration_weeks: number
+          id?: string
+          muscle_details?: Json
+          overall_change_percent?: number
+          overall_max_weight?: number
+          start_week: string
+          total_sets?: number
+          total_volume?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          duration_weeks?: number
+          id?: string
+          muscle_details?: Json
+          overall_change_percent?: number
+          overall_max_weight?: number
+          start_week?: string
+          total_sets?: number
+          total_volume?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_exercises: {
         Row: {
           created_at: string
