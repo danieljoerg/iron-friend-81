@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
+import SharedResult from "./pages/SharedResult";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
