@@ -9,6 +9,7 @@ import { formatDateString } from "@/lib/workoutData";
 interface MesocycleCompletionScreenProps {
   mesocycle: Mesocycle;
   userId: string;
+  displayName?: string | null;
   deloadCompleted: boolean;
   onStartNextMesocycle: () => void;
   onDoDeloadFirst: () => void;
