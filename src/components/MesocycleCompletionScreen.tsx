@@ -185,6 +185,7 @@ function getRecommendation(overallChange: number, deloadCompleted: boolean): str
 export default function MesocycleCompletionScreen({
   mesocycle,
   userId,
+  displayName,
   deloadCompleted,
   onStartNextMesocycle,
   onDoDeloadFirst,
@@ -192,7 +193,8 @@ export default function MesocycleCompletionScreen({
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<MesoSummary | null>(null);
   const [sharing, setSharing] = useState(false);
-  const shareRef = useRef<HTMLDivElement>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     getMesocycleDetailedData(mesocycle, userId).then((data) => {
@@ -202,35 +204,54 @@ export default function MesocycleCompletionScreen({
   }, [mesocycle, userId]);
 
   const handleShare = async () => {
-    if (!shareRef.current) return;
+    if (!summary) return;
     setSharing(true);
     try {
-      const canvas = await html2canvas(shareRef.current, {
-        backgroundColor: "#0a0a0f",
-        scale: 2,
-        useCORS: true,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) { setSharing(false); return; }
-        const file = new File([blob], "mesocycle-results.png", { type: "image/png" });
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file], title: "Mein Mesozyklus-Ergebnis", text: "Schau dir meine Fortschritte an! 💪" });
-          } catch { /* user cancelled */ }
-        } else {
-          // Fallback: download
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "mesocycle-results.png";
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+      // Save to DB
+      const { data, error } = await supabase
+        .from("shared_mesocycle_results")
+        .insert({
+          user_id: userId,
+          display_name: displayName || null,
+          duration_weeks: mesocycle.duration_weeks,
+          start_week: mesocycle.start_week,
+          total_volume: summary.totalVolume,
+          total_sets: summary.totalSets,
+          overall_max_weight: summary.overallMaxWeight,
+          overall_change_percent: summary.overallChangePercent,
+          muscle_details: summary.muscleDetails,
+        } as any)
+        .select("id")
+        .single();
+
+      if (error || !data) {
+        console.error("Failed to share:", error);
         setSharing(false);
-      }, "image/png");
-    } catch {
-      setSharing(false);
+        return;
+      }
+
+      const url = `${window.location.origin}/shared/${data.id}`;
+      setShareUrl(url);
+
+      // Try native share
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "Mein Mesozyklus-Ergebnis 💪",
+            text: `Schau dir meine Fortschritte an: ${summary.overallChangePercent > 0 ? "+" : ""}${summary.overallChangePercent}% Volumen-Steigerung!`,
+            url,
+          });
+        } catch { /* user cancelled */ }
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      }
+    } catch (err) {
+      console.error("Share error:", err);
     }
+    setSharing(false);
   };
 
   const s = summary;
