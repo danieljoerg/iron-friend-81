@@ -8,7 +8,7 @@ import WeekSelector from "@/components/WeekSelector";
 import DayCard from "@/components/DayCard";
 import ProgressChart from "@/components/ProgressChart";
 import { getWeekStart, formatDateString, FULL_DAYS, type WeekLog } from "@/lib/workoutData";
-import { getOrCreateWeekDb, saveWeekDb, completeWeekAndPrepareNext, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, getActiveMesocycle, createMesocycle, deleteMesocycle, getMesocycleWeekInfo, computeDeloadTargets, type RepRange, type ExerciseTarget, type Mesocycle } from "@/lib/workoutDb";
+import { getOrCreateWeekDb, saveWeekDb, completeWeekAndPrepareNext, getRepRangesDb, setRepRangeDb, setYoutubeUrlDb, getPreviousWeekData, getActiveMesocycle, createMesocycle, deleteMesocycle, getMesocycleWeekInfo, computeDeloadTargets, getPeakWeekExercisesScaled, type RepRange, type ExerciseTarget, type Mesocycle } from "@/lib/workoutDb";
 import MesocycleBanner from "@/components/MesocycleBanner";
 import MesocycleCompletionScreen from "@/components/MesocycleCompletionScreen";
 import type { ExerciseLog } from "@/lib/workoutData";
@@ -183,9 +183,30 @@ const Index = () => {
     setShowMesoCompletion(false);
     setCompletedMesocycle(null);
 
-    // Complete week and prepare next (the save was already done)
+    // Get peak week exercises at 90% for the new mesocycle
     const completedWeek = week;
-    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+    const nextWeekDate = new Date(completedWeek.weekStart + "T00:00:00");
+    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    const nextWeekStart = formatDateString(nextWeekDate);
+
+    // Get peak week data scaled to 90%
+    let peakDays: typeof week.days | null = null;
+    if (completedMesocycle) {
+      peakDays = await getPeakWeekExercisesScaled(completedMesocycle, user.id, 0.9);
+    }
+
+    // Create next week with peak week exercises at 90% (or fallback to normal copy)
+    let nextWeek: WeekLog;
+    if (peakDays && peakDays.some(d => d.exercises.length > 0)) {
+      // Save completed week first
+      await saveWeekDb(completedWeek, user.id);
+      
+      // Create next week with 90% peak data
+      nextWeek = { weekStart: nextWeekStart, days: peakDays };
+      await saveWeekDb(nextWeek, user.id);
+    } else {
+      nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+    }
 
     const [prevData, rr] = await Promise.all([
       getPreviousWeekData(nextWeek.weekStart, user.id),

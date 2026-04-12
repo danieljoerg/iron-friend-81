@@ -572,6 +572,83 @@ export async function completeWeekAndPrepareNext(
   return { weekStart: nextWeekStart, days: nextDays };
 }
 
+/**
+ * Get exercises from the peak week (highest volume) of a mesocycle, scaled to a factor.
+ * Used to start a new mesocycle at 90% of peak weights.
+ */
+export async function getPeakWeekExercisesScaled(
+  mesocycle: Mesocycle,
+  userId: string,
+  scaleFactor: number = 0.9
+): Promise<DayLog[]> {
+  const mesoStart = new Date(mesocycle.start_week + "T00:00:00");
+
+  // Get all weeks in this mesocycle (excluding deload = last week)
+  const { data: allWeeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId)
+    .order("week_start");
+
+  if (!allWeeks || allWeeks.length === 0) return [];
+
+  const mesoWeeks = allWeeks.filter((w) => {
+    const ws = new Date(w.week_start + "T00:00:00");
+    const diffMs = ws.getTime() - mesoStart.getTime();
+    const weekNum = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
+    return weekNum >= 1 && weekNum < mesocycle.duration_weeks; // exclude deload
+  });
+
+  if (mesoWeeks.length === 0) return [];
+
+  // Get all exercises for these weeks
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("week_id, day, exercise, sets, sort_order, superset_with_next, note")
+    .eq("user_id", userId)
+    .in("week_id", mesoWeeks.map((w) => w.id))
+    .order("sort_order");
+
+  if (!exercises || exercises.length === 0) return [];
+
+  // Find the peak week by total volume
+  let peakWeekId = mesoWeeks[mesoWeeks.length - 1].id; // default to last training week
+  let peakVolume = 0;
+  for (const w of mesoWeeks) {
+    const weekExs = exercises.filter((e) => e.week_id === w.id);
+    let vol = 0;
+    weekExs.forEach((e) => {
+      ((e.sets as any[]) || []).forEach((s: any) => {
+        vol += (s.reps || 0) * (s.kg || 0);
+      });
+    });
+    if (vol > peakVolume) {
+      peakVolume = vol;
+      peakWeekId = w.id;
+    }
+  }
+
+  // Build DayLog from peak week with scaled weights
+  const peakExercises = exercises.filter((e) => e.week_id === peakWeekId);
+
+  return FULL_DAYS.map((day) => {
+    const dayExs = peakExercises.filter((e) => e.day === day);
+    const seen = new Set<string>();
+    const dayExercises: ExerciseLog[] = dayExs
+      .filter((e) => { if (seen.has(e.exercise)) return false; seen.add(e.exercise); return true; })
+      .map((e) => ({
+        exercise: e.exercise,
+        sets: ((e.sets as any[]) || []).map((s: any) => ({
+          reps: s.reps || 0,
+          kg: Math.round((s.kg || 0) * scaleFactor * 2) / 2, // round to 0.5kg
+        })),
+        supersetWithNext: (e as any).superset_with_next || false,
+        note: (e as any).note || undefined,
+      }));
+    return { day, exercises: dayExercises };
+  });
+}
+
 export async function getExerciseProgressDb(
   exercise: string,
   userId: string
