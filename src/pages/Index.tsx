@@ -225,9 +225,27 @@ const Index = () => {
     setShowMesoCompletion(false);
     setCompletedMesocycle(null);
 
-    // Prepare next week with deload targets (don't start a new mesocycle yet)
+    // Overwrite pre-saved 90% data with normal copy (deload progression applies via UI)
     const completedWeek = week;
-    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+    // Force overwrite: delete existing next week exercises first, then copy from completed week
+    const nextDate = new Date(completedWeek.weekStart + "T00:00:00");
+    nextDate.setDate(nextDate.getDate() + 7);
+    const nextWeekStart = formatDateString(nextDate);
+    // Save with deload copy (completeWeekAndPrepareNext checks for existing exercises,
+    // so we overwrite by saving directly)
+    const nextWeek: WeekLog = {
+      weekStart: nextWeekStart,
+      days: completedWeek.days.map(d => ({
+        day: d.day,
+        exercises: d.exercises.map(ex => ({
+          exercise: ex.exercise,
+          sets: ex.sets.map(s => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+          supersetWithNext: ex.supersetWithNext,
+          note: ex.note,
+        })),
+      })),
+    };
+    await saveWeekDb(nextWeek, user.id);
 
     const [prevData, rr] = await Promise.all([
       getPreviousWeekData(nextWeek.weekStart, user.id),
