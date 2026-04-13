@@ -142,9 +142,19 @@ const Index = () => {
     // Save completed week
     await saveWeekDb(completedWeek, user.id);
 
-    // If last meso week, show completion screen instead of navigating
+    // If last meso week, pre-create next week with 90% peak data and show completion screen
     if (isLastMesoWeek && mesocycle) {
-      // Check if the deload week (this week) actually had exercises
+      // Pre-create next week with 90% peak data so it persists even if user refreshes
+      const peakDays = await getPeakWeekExercisesScaled(mesocycle, user.id, 0.9);
+      const nextDate = new Date(completedWeek.weekStart + "T00:00:00");
+      nextDate.setDate(nextDate.getDate() + 7);
+      const nextWeekStart = formatDateString(nextDate);
+      
+      if (peakDays && peakDays.some(d => d.exercises.length > 0)) {
+        console.log("[handleCompleteWeek] Pre-saving 90% peak week data for", nextWeekStart);
+        await saveWeekDb({ weekStart: nextWeekStart, days: peakDays }, user.id);
+      }
+
       const hadDeloadExercises = completedWeek.days.some(d => d.exercises.length > 0);
       setDeloadCompleted(hadDeloadExercises);
       setCompletedMesocycle(mesocycle);
