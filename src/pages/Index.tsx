@@ -142,9 +142,19 @@ const Index = () => {
     // Save completed week
     await saveWeekDb(completedWeek, user.id);
 
-    // If last meso week, show completion screen instead of navigating
+    // If last meso week, pre-create next week with 90% peak data and show completion screen
     if (isLastMesoWeek && mesocycle) {
-      // Check if the deload week (this week) actually had exercises
+      // Pre-create next week with 90% peak data so it persists even if user refreshes
+      const peakDays = await getPeakWeekExercisesScaled(mesocycle, user.id, 0.9);
+      const nextDate = new Date(completedWeek.weekStart + "T00:00:00");
+      nextDate.setDate(nextDate.getDate() + 7);
+      const nextWeekStart = formatDateString(nextDate);
+      
+      if (peakDays && peakDays.some(d => d.exercises.length > 0)) {
+        console.log("[handleCompleteWeek] Pre-saving 90% peak week data for", nextWeekStart);
+        await saveWeekDb({ weekStart: nextWeekStart, days: peakDays }, user.id);
+      }
+
       const hadDeloadExercises = completedWeek.days.some(d => d.exercises.length > 0);
       setDeloadCompleted(hadDeloadExercises);
       setCompletedMesocycle(mesocycle);
@@ -183,30 +193,14 @@ const Index = () => {
     setShowMesoCompletion(false);
     setCompletedMesocycle(null);
 
-    // Get peak week exercises at 90% for the new mesocycle
+    // Next week was already pre-created with 90% peak data in handleCompleteWeek
     const completedWeek = week;
     const nextWeekDate = new Date(completedWeek.weekStart + "T00:00:00");
     nextWeekDate.setDate(nextWeekDate.getDate() + 7);
     const nextWeekStart = formatDateString(nextWeekDate);
 
-    // Get peak week data scaled to 90%
-    let peakDays: typeof week.days | null = null;
-    if (completedMesocycle) {
-      peakDays = await getPeakWeekExercisesScaled(completedMesocycle, user.id, 0.9);
-    }
-
-    // Create next week with peak week exercises at 90% (or fallback to normal copy)
-    let nextWeek: WeekLog;
-    if (peakDays && peakDays.some(d => d.exercises.length > 0)) {
-      // Save completed week first
-      await saveWeekDb(completedWeek, user.id);
-      
-      // Create next week with 90% peak data
-      nextWeek = { weekStart: nextWeekStart, days: peakDays };
-      await saveWeekDb(nextWeek, user.id);
-    } else {
-      nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
-    }
+    // Load the pre-saved next week (with 90% data)
+    const nextWeek = await getOrCreateWeekDb(nextWeekStart, user.id);
 
     const [prevData, rr] = await Promise.all([
       getPreviousWeekData(nextWeek.weekStart, user.id),
@@ -231,9 +225,27 @@ const Index = () => {
     setShowMesoCompletion(false);
     setCompletedMesocycle(null);
 
-    // Prepare next week with deload targets (don't start a new mesocycle yet)
+    // Overwrite pre-saved 90% data with normal copy (deload progression applies via UI)
     const completedWeek = week;
-    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+    // Force overwrite: delete existing next week exercises first, then copy from completed week
+    const nextDate = new Date(completedWeek.weekStart + "T00:00:00");
+    nextDate.setDate(nextDate.getDate() + 7);
+    const nextWeekStart = formatDateString(nextDate);
+    // Save with deload copy (completeWeekAndPrepareNext checks for existing exercises,
+    // so we overwrite by saving directly)
+    const nextWeek: WeekLog = {
+      weekStart: nextWeekStart,
+      days: completedWeek.days.map(d => ({
+        day: d.day,
+        exercises: d.exercises.map(ex => ({
+          exercise: ex.exercise,
+          sets: ex.sets.map(s => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+          supersetWithNext: ex.supersetWithNext,
+          note: ex.note,
+        })),
+      })),
+    };
+    await saveWeekDb(nextWeek, user.id);
 
     const [prevData, rr] = await Promise.all([
       getPreviousWeekData(nextWeek.weekStart, user.id),
