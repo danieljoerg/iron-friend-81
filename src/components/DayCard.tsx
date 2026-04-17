@@ -502,14 +502,15 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
             {(() => {
               const prevEx = prevDayExercises?.find((p) => p.exercise === ex.exercise);
-              const normalTargets = prevEx ? computeTargets(prevEx.sets, repRanges?.[ex.exercise] ? { ...repRanges[ex.exercise] } : undefined) : [];
-              const targets = isDeloadWeek && prevEx ? computeDeloadTargets(prevEx.sets) : normalTargets;
               return (
                 <div className="space-y-1">
                   {ex.sets.map((set, setIdx) => {
-                    const target = targets[setIdx];
-                    const hasTarget = target && (target.reps > 0 || target.kg > 0);
-                    const isProgression = hasTarget && (target.reps !== set.reps || target.kg !== set.kg);
+                    const prevSet = prevEx?.sets?.[setIdx];
+                    const currentVol = (set.reps || 0) * (set.kg || 0);
+                    const prevVol = prevSet ? (prevSet.reps || 0) * (prevSet.kg || 0) : 0;
+                    const volDelta = currentVol - prevVol;
+                    const hasPrev = prevSet && prevVol > 0;
+                    const hasCurrent = currentVol > 0;
                     return (
                     <div key={setIdx} className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-all ${
                       set.done 
