@@ -502,14 +502,15 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
             {(() => {
               const prevEx = prevDayExercises?.find((p) => p.exercise === ex.exercise);
-              const normalTargets = prevEx ? computeTargets(prevEx.sets, repRanges?.[ex.exercise] ? { ...repRanges[ex.exercise] } : undefined) : [];
-              const targets = isDeloadWeek && prevEx ? computeDeloadTargets(prevEx.sets) : normalTargets;
               return (
                 <div className="space-y-1">
                   {ex.sets.map((set, setIdx) => {
-                    const target = targets[setIdx];
-                    const hasTarget = target && (target.reps > 0 || target.kg > 0);
-                    const isProgression = hasTarget && (target.reps !== set.reps || target.kg !== set.kg);
+                    const prevSet = prevEx?.sets?.[setIdx];
+                    const currentVol = (set.reps || 0) * (set.kg || 0);
+                    const prevVol = prevSet ? (prevSet.reps || 0) * (prevSet.kg || 0) : 0;
+                    const volDelta = currentVol - prevVol;
+                    const hasPrev = prevSet && prevVol > 0;
+                    const hasCurrent = currentVol > 0;
                     return (
                     <div key={setIdx} className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-all ${
                       set.done 
@@ -548,10 +549,27 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           }`}
                         />
                         <span className={`text-[10px] font-mono shrink-0 ${set.done ? 'text-primary/60' : 'text-muted-foreground'}`}>kg</span>
-                        {/* Progression target */}
-                        {hasTarget && isProgression && !set.done && (
-                          <span className={`text-[9px] font-mono shrink-0 px-1 py-0.5 rounded ${isDeloadWeek ? 'text-yellow-600 bg-yellow-500/10' : 'text-primary bg-primary/10'}`}>
-                            →{target.reps}×{target.kg}
+                        {/* Volume delta vs same set last week */}
+                        {hasPrev && hasCurrent && !set.done && (
+                          <span
+                            className={`text-[9px] font-mono shrink-0 px-1 py-0.5 rounded ${
+                              volDelta > 0
+                                ? 'text-primary bg-primary/10'
+                                : volDelta < 0
+                                  ? 'text-orange-400 bg-orange-500/10'
+                                  : 'text-muted-foreground bg-muted/40'
+                            }`}
+                            title={`Vorwoche: ${prevSet!.reps}×${prevSet!.kg}kg = ${prevVol}kg vol`}
+                          >
+                            {volDelta > 0 ? '+' : ''}{volDelta} vol
+                          </span>
+                        )}
+                        {hasPrev && !hasCurrent && !set.done && (
+                          <span
+                            className="text-[9px] font-mono shrink-0 px-1 py-0.5 rounded text-muted-foreground bg-muted/40"
+                            title="Vorwoche"
+                          >
+                            LW {prevSet!.reps}×{prevSet!.kg}
                           </span>
                         )}
                         <input
