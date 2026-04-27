@@ -512,11 +512,12 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                     const hasPrev = prevSet && prevVol > 0;
                     const hasCurrent = currentVol > 0;
                     return (
-                    <div key={setIdx} className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-all ${
+                    <div key={setIdx} className={`rounded-lg px-2 py-1 transition-all ${
                       set.done 
                         ? 'bg-primary/8 border border-primary/20' 
                         : ''
                     }`}>
+                      <div className="flex items-center gap-2">
                         <span className={`font-mono text-[10px] w-4 shrink-0 ${set.done ? 'text-primary' : 'text-muted-foreground'}`}>
                           {set.done ? '✓' : setIdx + 1}
                         </span>
