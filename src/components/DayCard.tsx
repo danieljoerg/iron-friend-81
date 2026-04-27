@@ -585,6 +585,30 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           </button>
                         )}
                       </div>
+                      {/* Volume delta vs same set last week — own row */}
+                      {!set.done && (hasPrev || hasCurrent) && (
+                        <div className="flex items-center pl-6 mt-0.5 h-3.5">
+                          {hasPrev && hasCurrent ? (
+                            <span
+                              className={`text-[9px] font-mono ${
+                                volDelta > 0
+                                  ? 'text-primary'
+                                  : volDelta < 0
+                                    ? 'text-orange-400'
+                                    : 'text-muted-foreground'
+                              }`}
+                              title={`Vorwoche: ${prevSet!.reps}×${prevSet!.kg}kg = ${Math.round(prevVol)}kg vol`}
+                            >
+                              {volDelta > 0 ? '+' : ''}{Math.round(volDelta)} vol {hasPrev ? `(LW ${prevSet!.reps}×${prevSet!.kg})` : ''}
+                            </span>
+                          ) : hasPrev ? (
+                            <span className="text-[9px] font-mono text-muted-foreground">
+                              LW {prevSet!.reps}×{prevSet!.kg} = {Math.round(prevVol)} vol
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
                     );
                   })}
                 </div>
