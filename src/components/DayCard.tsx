@@ -512,11 +512,12 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                     const hasPrev = prevSet && prevVol > 0;
                     const hasCurrent = currentVol > 0;
                     return (
-                    <div key={setIdx} className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-all ${
+                    <div key={setIdx} className={`rounded-lg px-2 py-1 transition-all ${
                       set.done 
                         ? 'bg-primary/8 border border-primary/20' 
                         : ''
                     }`}>
+                      <div className="flex items-center gap-2">
                         <span className={`font-mono text-[10px] w-4 shrink-0 ${set.done ? 'text-primary' : 'text-muted-foreground'}`}>
                           {set.done ? '✓' : setIdx + 1}
                         </span>
@@ -549,29 +550,6 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           }`}
                         />
                         <span className={`text-[10px] font-mono shrink-0 ${set.done ? 'text-primary/60' : 'text-muted-foreground'}`}>kg</span>
-                        {/* Volume delta vs same set last week */}
-                        {hasPrev && hasCurrent && !set.done && (
-                          <span
-                            className={`text-[9px] font-mono shrink-0 px-1 py-0.5 rounded ${
-                              volDelta > 0
-                                ? 'text-primary bg-primary/10'
-                                : volDelta < 0
-                                  ? 'text-orange-400 bg-orange-500/10'
-                                  : 'text-muted-foreground bg-muted/40'
-                            }`}
-                            title={`Vorwoche: ${prevSet!.reps}×${prevSet!.kg}kg = ${prevVol}kg vol`}
-                          >
-                            {volDelta > 0 ? '+' : ''}{volDelta} vol
-                          </span>
-                        )}
-                        {hasPrev && !hasCurrent && !set.done && (
-                          <span
-                            className="text-[9px] font-mono shrink-0 px-1 py-0.5 rounded text-muted-foreground bg-muted/40"
-                            title="Vorwoche"
-                          >
-                            LW {prevSet!.reps}×{prevSet!.kg}
-                          </span>
-                        )}
                         <input
                           type="number"
                           min={0}
@@ -607,6 +585,30 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                           </button>
                         )}
                       </div>
+                      {/* Volume delta vs same set last week — own row */}
+                      {!set.done && (hasPrev || hasCurrent) && (
+                        <div className="flex items-center pl-6 mt-0.5 h-3.5">
+                          {hasPrev && hasCurrent ? (
+                            <span
+                              className={`text-[9px] font-mono ${
+                                volDelta > 0
+                                  ? 'text-primary'
+                                  : volDelta < 0
+                                    ? 'text-orange-400'
+                                    : 'text-muted-foreground'
+                              }`}
+                              title={`Vorwoche: ${prevSet!.reps}×${prevSet!.kg}kg = ${Math.round(prevVol)}kg vol`}
+                            >
+                              {volDelta > 0 ? '+' : ''}{Math.round(volDelta)} vol {hasPrev ? `(LW ${prevSet!.reps}×${prevSet!.kg})` : ''}
+                            </span>
+                          ) : hasPrev ? (
+                            <span className="text-[9px] font-mono text-muted-foreground">
+                              LW {prevSet!.reps}×{prevSet!.kg} = {Math.round(prevVol)} vol
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
                     );
                   })}
                 </div>
