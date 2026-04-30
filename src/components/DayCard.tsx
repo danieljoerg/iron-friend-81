@@ -502,15 +502,14 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
 
             {(() => {
               const prevEx = prevDayExercises?.find((p) => p.exercise === ex.exercise);
+              const currentExVol = ex.sets.reduce((sum, s) => sum + (s.reps || 0) * (s.kg || 0), 0);
+              const prevExVol = prevEx?.sets?.reduce((sum, s) => sum + (s.reps || 0) * (s.kg || 0), 0) || 0;
+              const exVolDelta = currentExVol - prevExVol;
+              const hasPrevEx = prevExVol > 0;
+              const hasCurrentEx = currentExVol > 0;
               return (
                 <div className="space-y-1">
                   {ex.sets.map((set, setIdx) => {
-                    const prevSet = prevEx?.sets?.[setIdx];
-                    const currentVol = (set.reps || 0) * (set.kg || 0);
-                    const prevVol = prevSet ? (prevSet.reps || 0) * (prevSet.kg || 0) : 0;
-                    const volDelta = currentVol - prevVol;
-                    const hasPrev = prevSet && prevVol > 0;
-                    const hasCurrent = currentVol > 0;
                     return (
                     <div key={setIdx} className={`rounded-lg px-2 py-1 transition-all ${
                       set.done 
