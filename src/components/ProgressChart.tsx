@@ -198,11 +198,12 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-4 w-full">
-          <TabsTrigger value="exercise" className="flex-1 text-xs font-mono">Exercise</TabsTrigger>
-          <TabsTrigger value="muscle" className="flex-1 text-xs font-mono">Muscle</TabsTrigger>
-          <TabsTrigger value="overall" className="flex-1 text-xs font-mono">Overall</TabsTrigger>
-          <TabsTrigger value="meso" className="flex-1 text-xs font-mono">Meso</TabsTrigger>
+        <TabsList className="mb-4 w-full grid grid-cols-5">
+          <TabsTrigger value="exercise" className="text-[10px] font-mono">Exercise</TabsTrigger>
+          <TabsTrigger value="muscle" className="text-[10px] font-mono">Muscle</TabsTrigger>
+          <TabsTrigger value="overall" className="text-[10px] font-mono">Overall</TabsTrigger>
+          <TabsTrigger value="meso" className="text-[10px] font-mono">Meso</TabsTrigger>
+          <TabsTrigger value="pr" className="text-[10px] font-mono">PR</TabsTrigger>
         </TabsList>
 
         <TabsContent value="exercise">
