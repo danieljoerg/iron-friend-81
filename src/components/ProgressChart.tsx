@@ -186,6 +186,8 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
       getOverallProgressDb(userId).then(setData);
     } else if (tab === "meso") {
       getMesocycleComparisonDb(userId).then(setMesoData);
+    } else if (tab === "pr") {
+      getPersonalRecordsDb(userId).then(setPrData);
     }
   }, [tab, selectedExercise, selectedMuscle, userId]);
 
