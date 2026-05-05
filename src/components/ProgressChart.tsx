@@ -174,6 +174,7 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup>(MUSCLE_GROUPS[0]);
   const [data, setData] = useState<ChartData>([]);
   const [mesoData, setMesoData] = useState<MesocycleComparison[]>([]);
+  const [prData, setPrData] = useState<PersonalRecord[]>([]);
 
   useEffect(() => {
     if (!userId) return;
