@@ -1,8 +1,8 @@
 import { EXERCISES, MUSCLE_GROUPS, type MuscleGroup } from "@/lib/workoutData";
-import { getExerciseProgressDb, getMuscleGroupProgressDb, getOverallProgressDb, getMesocycleComparisonDb, type MesocycleComparison } from "@/lib/workoutDb";
+import { getExerciseProgressDb, getMuscleGroupProgressDb, getOverallProgressDb, getMesocycleComparisonDb, getPersonalRecordsDb, type MesocycleComparison, type PersonalRecord } from "@/lib/workoutDb";
 import { useState, useEffect } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { TrendingUp, TrendingDown, Minus, Trophy, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy, Activity, Award } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ProgressChartProps {
@@ -174,6 +174,7 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup>(MUSCLE_GROUPS[0]);
   const [data, setData] = useState<ChartData>([]);
   const [mesoData, setMesoData] = useState<MesocycleComparison[]>([]);
+  const [prData, setPrData] = useState<PersonalRecord[]>([]);
 
   useEffect(() => {
     if (!userId) return;
@@ -185,6 +186,8 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
       getOverallProgressDb(userId).then(setData);
     } else if (tab === "meso") {
       getMesocycleComparisonDb(userId).then(setMesoData);
+    } else if (tab === "pr") {
+      getPersonalRecordsDb(userId).then(setPrData);
     }
   }, [tab, selectedExercise, selectedMuscle, userId]);
 
@@ -195,11 +198,12 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-4 w-full">
-          <TabsTrigger value="exercise" className="flex-1 text-xs font-mono">Exercise</TabsTrigger>
-          <TabsTrigger value="muscle" className="flex-1 text-xs font-mono">Muscle</TabsTrigger>
-          <TabsTrigger value="overall" className="flex-1 text-xs font-mono">Overall</TabsTrigger>
-          <TabsTrigger value="meso" className="flex-1 text-xs font-mono">Meso</TabsTrigger>
+        <TabsList className="mb-4 w-full grid grid-cols-5">
+          <TabsTrigger value="exercise" className="text-[10px] font-mono">Exercise</TabsTrigger>
+          <TabsTrigger value="muscle" className="text-[10px] font-mono">Muscle</TabsTrigger>
+          <TabsTrigger value="overall" className="text-[10px] font-mono">Overall</TabsTrigger>
+          <TabsTrigger value="meso" className="text-[10px] font-mono">Meso</TabsTrigger>
+          <TabsTrigger value="pr" className="text-[10px] font-mono">PR</TabsTrigger>
         </TabsList>
 
         <TabsContent value="exercise">
@@ -244,7 +248,91 @@ export default function ProgressChart({ userId }: ProgressChartProps) {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="pr">
+          {prData.length > 0 ? (
+            <PRContent data={prData} />
+          ) : (
+            <div className="h-48 flex flex-col items-center justify-center gap-2">
+              <Award className="w-6 h-6 text-muted-foreground" />
+              <p className="text-muted-foreground text-sm font-mono text-center">
+                Noch keine PRs — logge ein paar Sets!
+              </p>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function PRContent({ data }: { data: PersonalRecord[] }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
+        Personal Records · sortiert nach meist trainierten Exercises
+      </p>
+      {data.map((pr, idx) => (
+        <div key={pr.exercise} className="rounded-lg border border-border bg-secondary/30 p-3">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-muted-foreground font-mono text-[10px] w-5 shrink-0">#{idx + 1}</span>
+              <h3 className="font-mono text-sm font-bold text-foreground truncate">{pr.exercise}</h3>
+            </div>
+            <span className="text-muted-foreground font-mono text-[10px] shrink-0">
+              {pr.totalSets} Sets
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded bg-background/40 p-2">
+              <div className="flex items-center gap-1 mb-0.5">
+                <Trophy className="w-3 h-3 text-primary" />
+                <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Max kg</p>
+              </div>
+              <p className="font-mono text-sm font-bold text-foreground">
+                {pr.bestWeight} kg <span className="text-muted-foreground text-[10px]">× {pr.bestWeightReps}</span>
+              </p>
+              <p className="text-muted-foreground text-[9px] font-mono">
+                {new Date(pr.bestWeightDate + "T00:00:00").toLocaleDateString("de-CH", { day: "2-digit", month: "short", year: "2-digit" })}
+              </p>
+            </div>
+            <div className="rounded bg-background/40 p-2">
+              <div className="flex items-center gap-1 mb-0.5">
+                <Award className="w-3 h-3 text-primary" />
+                <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Max Reps</p>
+              </div>
+              <p className="font-mono text-sm font-bold text-foreground">
+                {pr.bestReps} <span className="text-muted-foreground text-[10px]">@ {pr.bestRepsKg} kg</span>
+              </p>
+              <p className="text-muted-foreground text-[9px] font-mono">
+                {new Date(pr.bestRepsDate + "T00:00:00").toLocaleDateString("de-CH", { day: "2-digit", month: "short", year: "2-digit" })}
+              </p>
+            </div>
+            <div className="rounded bg-background/40 p-2">
+              <div className="flex items-center gap-1 mb-0.5">
+                <TrendingUp className="w-3 h-3 text-primary" />
+                <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Bestes Set (Vol)</p>
+              </div>
+              <p className="font-mono text-sm font-bold text-foreground">
+                {Math.round(pr.bestSetVolume)} kg
+              </p>
+              <p className="text-muted-foreground text-[9px] font-mono">
+                {pr.bestSetReps} × {pr.bestSetKg} kg
+              </p>
+            </div>
+            <div className="rounded bg-background/40 p-2">
+              <div className="flex items-center gap-1 mb-0.5">
+                <Activity className="w-3 h-3 text-primary" />
+                <p className="text-muted-foreground text-[9px] font-mono uppercase tracking-wider">Est. 1RM</p>
+              </div>
+              <p className="font-mono text-sm font-bold text-foreground">
+                {Math.round(pr.estimated1RM * 10) / 10} kg
+              </p>
+              <p className="text-muted-foreground text-[9px] font-mono">Epley-Formel</p>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

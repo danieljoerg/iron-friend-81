@@ -810,6 +810,75 @@ export async function getMesocycleComparisonDb(userId: string): Promise<Mesocycl
   });
 }
 
+export type PersonalRecord = {
+  exercise: string;
+  bestWeight: number;        // höchstes je geloggtes Gewicht
+  bestWeightReps: number;    // Reps bei diesem Gewicht
+  bestWeightDate: string;    // Wochenstart, an dem es passierte
+  bestReps: number;          // höchste Reps in irgendeinem Set
+  bestRepsKg: number;        // Gewicht bei diesen Reps
+  bestRepsDate: string;
+  bestSetVolume: number;     // höchstes reps*kg in einem Set
+  bestSetReps: number;
+  bestSetKg: number;
+  bestSetDate: string;
+  estimated1RM: number;      // Epley: kg * (1 + reps/30), bestes Set
+  totalSets: number;         // wie oft diese Exercise je geloggt wurde (Sets)
+};
+
+export async function getPersonalRecordsDb(userId: string): Promise<PersonalRecord[]> {
+  const { data: weeks } = await supabase
+    .from("workout_weeks")
+    .select("id, week_start")
+    .eq("user_id", userId);
+  if (!weeks || weeks.length === 0) return [];
+  const weekMap = new Map(weeks.map((w) => [w.id, w.week_start as string]));
+
+  const { data: exercises } = await supabase
+    .from("workout_exercises")
+    .select("week_id, exercise, sets")
+    .eq("user_id", userId);
+  if (!exercises) return [];
+
+  const byEx = new Map<string, PersonalRecord>();
+  exercises.forEach((e: any) => {
+    const weekStart = weekMap.get(e.week_id) || "";
+    const sets = (e.sets as any[]) || [];
+    sets.forEach((s: any) => {
+      const reps = s.reps || 0;
+      const kg = s.kg || 0;
+      if (reps === 0 || kg === 0) return;
+      const setVol = reps * kg;
+      const e1rm = kg * (1 + reps / 30);
+      let pr = byEx.get(e.exercise);
+      if (!pr) {
+        pr = {
+          exercise: e.exercise,
+          bestWeight: kg, bestWeightReps: reps, bestWeightDate: weekStart,
+          bestReps: reps, bestRepsKg: kg, bestRepsDate: weekStart,
+          bestSetVolume: setVol, bestSetReps: reps, bestSetKg: kg, bestSetDate: weekStart,
+          estimated1RM: e1rm,
+          totalSets: 0,
+        };
+        byEx.set(e.exercise, pr);
+      }
+      pr.totalSets += 1;
+      if (kg > pr.bestWeight) {
+        pr.bestWeight = kg; pr.bestWeightReps = reps; pr.bestWeightDate = weekStart;
+      }
+      if (reps > pr.bestReps) {
+        pr.bestReps = reps; pr.bestRepsKg = kg; pr.bestRepsDate = weekStart;
+      }
+      if (setVol > pr.bestSetVolume) {
+        pr.bestSetVolume = setVol; pr.bestSetReps = reps; pr.bestSetKg = kg; pr.bestSetDate = weekStart;
+      }
+      if (e1rm > pr.estimated1RM) pr.estimated1RM = e1rm;
+    });
+  });
+
+  return Array.from(byEx.values()).sort((a, b) => b.totalSets - a.totalSets);
+}
+
 export async function getOverallProgressDb(
   userId: string
 ): Promise<{ week: string; volume: number; maxWeight: number }[]> {
