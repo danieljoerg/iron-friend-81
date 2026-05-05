@@ -1,8 +1,8 @@
 import { EXERCISES, MUSCLE_GROUPS, type MuscleGroup } from "@/lib/workoutData";
-import { getExerciseProgressDb, getMuscleGroupProgressDb, getOverallProgressDb, getMesocycleComparisonDb, type MesocycleComparison } from "@/lib/workoutDb";
+import { getExerciseProgressDb, getMuscleGroupProgressDb, getOverallProgressDb, getMesocycleComparisonDb, getPersonalRecordsDb, type MesocycleComparison, type PersonalRecord } from "@/lib/workoutDb";
 import { useState, useEffect } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { TrendingUp, TrendingDown, Minus, Trophy, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy, Activity, Award } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ProgressChartProps {
