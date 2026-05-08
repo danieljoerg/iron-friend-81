@@ -362,9 +362,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                   {EXERCISES.filter((e) => matchesExerciseSearch(e, swapSearch)).map((name) => (
                     <button
                       key={name}
-                      onClick={() => {
+                      onClick={async () => {
+                        const best = user ? await getBestSetForExerciseDb(user.id, name) : null;
+                        const newSets = best ? [{ reps: best.reps, kg: best.kg }] : [{ reps: 0, kg: 0 }];
                         const exercises = [...dayLog.exercises];
-                        exercises[exIdx] = { ...exercises[exIdx], exercise: name, sets: [{ reps: 0, kg: 0 }] };
+                        exercises[exIdx] = { ...exercises[exIdx], exercise: name, sets: newSets };
                         onChange({ ...dayLog, exercises });
                         setSwappingIdx(null);
                         setSwapSearch("");
