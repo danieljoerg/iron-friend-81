@@ -2,7 +2,8 @@ import { Plus, Trash2, Settings2, Check, ChevronDown, Youtube, X, Link, GripVert
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import ReadinessCheck from "@/components/ReadinessCheck";
 import { useState, useMemo } from "react";
-import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { computeTargets, computeDeloadTargets, getBestSetForExerciseDb, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { useAuth } from "@/hooks/useAuth";
 import { DndContext, closestCenter, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -52,6 +53,7 @@ function SortableExerciseWrapper({ id, disabled, children }: { id: string; disab
 }
 
 export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChange, repRanges, onRepRangeChange, onYoutubeUrlChange, prevDayExercises, expanded, onToggleExpanded, isDeloadWeek }: DayCardProps) {
+  const { user } = useAuth();
   const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(dayLog.day);
   const dayDate = new Date(weekStart + "T00:00:00");
   dayDate.setDate(dayDate.getDate() + dayIndex);
@@ -360,9 +362,11 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                   {EXERCISES.filter((e) => matchesExerciseSearch(e, swapSearch)).map((name) => (
                     <button
                       key={name}
-                      onClick={() => {
+                      onClick={async () => {
+                        const best = user ? await getBestSetForExerciseDb(user.id, name) : null;
+                        const newSets = best ? [{ reps: best.reps, kg: best.kg }] : [{ reps: 0, kg: 0 }];
                         const exercises = [...dayLog.exercises];
-                        exercises[exIdx] = { ...exercises[exIdx], exercise: name, sets: [{ reps: 0, kg: 0 }] };
+                        exercises[exIdx] = { ...exercises[exIdx], exercise: name, sets: newSets };
                         onChange({ ...dayLog, exercises });
                         setSwappingIdx(null);
                         setSwapSearch("");
