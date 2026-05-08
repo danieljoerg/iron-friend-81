@@ -2,7 +2,8 @@ import { Plus, Trash2, Settings2, Check, ChevronDown, Youtube, X, Link, GripVert
 import { DayLog, ExerciseLog, EXERCISES, WorkoutSet, calculateVolume } from "@/lib/workoutData";
 import ReadinessCheck from "@/components/ReadinessCheck";
 import { useState, useMemo } from "react";
-import { computeTargets, computeDeloadTargets, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { computeTargets, computeDeloadTargets, getBestSetForExerciseDb, type RepRange, type ExerciseTarget } from "@/lib/workoutDb";
+import { useAuth } from "@/hooks/useAuth";
 import { DndContext, closestCenter, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
