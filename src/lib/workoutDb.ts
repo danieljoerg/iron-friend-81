@@ -879,6 +879,38 @@ export async function getPersonalRecordsDb(userId: string): Promise<PersonalReco
   return Array.from(byEx.values()).sort((a, b) => b.totalSets - a.totalSets);
 }
 
+/**
+ * Returns the best logged set (highest reps*kg) for a given exercise,
+ * or null if the user has no history for it.
+ */
+export async function getBestSetForExerciseDb(
+  userId: string,
+  exercise: string
+): Promise<{ reps: number; kg: number } | null> {
+  const { data: rows } = await supabase
+    .from("workout_exercises")
+    .select("sets")
+    .eq("user_id", userId)
+    .eq("exercise", exercise);
+  if (!rows || rows.length === 0) return null;
+  let best: { reps: number; kg: number } | null = null;
+  let bestVol = 0;
+  rows.forEach((r: any) => {
+    const sets = (r.sets as any[]) || [];
+    sets.forEach((s: any) => {
+      const reps = s.reps || 0;
+      const kg = s.kg || 0;
+      if (reps === 0 || kg === 0) return;
+      const vol = reps * kg;
+      if (vol > bestVol) {
+        bestVol = vol;
+        best = { reps, kg };
+      }
+    });
+  });
+  return best;
+}
+
 export async function getOverallProgressDb(
   userId: string
 ): Promise<{ week: string; volume: number; maxWeight: number }[]> {
