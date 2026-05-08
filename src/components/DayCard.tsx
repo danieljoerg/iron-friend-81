@@ -378,7 +378,7 @@ export default function DayCard({ dayLog, isToday, isRestDay, weekStart, onChang
                       <button
                         onClick={() => {
                           const exercises = [...dayLog.exercises];
-                          exercises[exIdx] = { ...exercises[exIdx], exercise: swapSearch.trim() };
+                          exercises[exIdx] = { ...exercises[exIdx], exercise: swapSearch.trim(), sets: [{ reps: 0, kg: 0 }] };
                           onChange({ ...dayLog, exercises });
                           setSwappingIdx(null);
                           setSwapSearch("");
