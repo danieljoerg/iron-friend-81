@@ -349,12 +349,38 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
 
           console.log("[getOrCreateWeek] After dedup:", dedupedPrev.length, "exercises to copy");
 
-          const rows = dedupedPrev.map((e, idx) => ({
+          // Per-exercise: find the latest sets across ALL previous weeks (not just the most recent week)
+          // This avoids stale pre-fills when an exercise was logged more recently in a different week.
+          const { data: allPrevRows } = await supabase
+            .from("workout_exercises")
+            .select("day, exercise, sets, workout_weeks!inner(week_start)")
+            .eq("user_id", userId)
+            .lt("workout_weeks.week_start", weekStart)
+            .order("workout_weeks(week_start)", { ascending: false });
+
+          const latestSetsByKey = new Map<string, any[]>();
+          for (const r of (allPrevRows as any[]) || []) {
+            const key = `${r.day}:${r.exercise}`;
+            if (!latestSetsByKey.has(key)) {
+              const sets = ((r.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
+              if (sets.length > 0) latestSetsByKey.set(key, sets);
+            }
+          }
+
+          // Build effective exercises using latest sets per key, falling back to the structural prev week's sets
+          const effective = dedupedPrev.map((e) => {
+            const key = `${e.day}:${e.exercise}`;
+            const latestSets = latestSetsByKey.get(key);
+            const sets = latestSets ?? ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
+            return { ...e, sets };
+          });
+
+          const rows = effective.map((e, idx) => ({
             week_id: weekRow!.id,
             user_id: userId,
             day: e.day,
             exercise: e.exercise,
-            sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+            sets: e.sets,
             sort_order: idx,
             superset_with_next: (e as any).superset_with_next || false,
             note: (e as any).note || null,
@@ -362,13 +388,13 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
           const { error: insertErr } = await supabase.from("workout_exercises").insert(rows);
           console.log("[getOrCreateWeek] Insert result:", insertErr ? `ERROR: ${insertErr.message}` : "OK");
 
-          // Build result from copied exercises with last week's values
+          // Build result from copied exercises with latest per-exercise values
           const days: DayLog[] = FULL_DAYS.map((day) => {
-            const dayExercises: ExerciseLog[] = dedupedPrev
+            const dayExercises: ExerciseLog[] = effective
               .filter((e) => e.day === day)
               .map((e) => ({
                 exercise: e.exercise,
-                sets: ((e.sets as any[]) || []).map((s: any) => ({ reps: s.reps || 0, kg: s.kg || 0 })),
+                sets: e.sets,
                 supersetWithNext: (e as any).superset_with_next || false,
                 note: (e as any).note || undefined,
               }));
@@ -376,6 +402,7 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
           });
           return { weekStart, days };
         }
+
       }
     }
   }
