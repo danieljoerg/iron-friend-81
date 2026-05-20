@@ -78,6 +78,7 @@ export async function setYoutubeUrlDb(userId: string, exercise: string, youtubeU
     .upsert({ user_id: userId, exercise, youtube_url: youtubeUrl } as any, { onConflict: "user_id,exercise" });
 }
 import { FULL_DAYS, EXERCISE_MUSCLE_MAP, MUSCLE_GROUPS, formatDateString, type WeekLog, type DayLog, type ExerciseLog, type WorkoutSet, type MuscleGroup } from "./workoutData";
+import { suggestNextWeekSets, targetRirForWeek } from "./progressionEngine";
 
 // Double Progression: increase reps first, then weight
 const COMPOUND_INCREMENT = 2.5;
@@ -502,12 +503,22 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
 }
 
 /**
- * Complete a week and prepare the next week with copied exercises.
- * Returns the next week's WeekLog ready for display.
+ * Complete a week and prepare the next week with auto-progressed sets.
+ *
+ * Wenn `options.mesocycle` + `options.repRanges` übergeben werden, läuft die
+ * Progression-Engine: pro Übung werden die Sets der nächsten Woche basierend
+ * auf RIR/Reps der Vorwoche und der Target-RIR der nächsten Meso-Woche
+ * vorgeschlagen (siehe progressionEngine.suggestNextWeekSets).
+ *
+ * Ohne Optionen fällt die Funktion auf die alte "clean copy"-Logik zurück.
  */
 export async function completeWeekAndPrepareNext(
   completedWeek: WeekLog,
-  userId: string
+  userId: string,
+  options?: {
+    mesocycle?: Mesocycle | null;
+    repRanges?: Record<string, RepRange>;
+  }
 ): Promise<WeekLog> {
   // 1. Save the completed week
   await saveWeekDb(completedWeek, userId);
@@ -554,7 +565,18 @@ export async function completeWeekAndPrepareNext(
     return getOrCreateWeekDb(nextWeekStart, userId);
   }
 
-  // 5. Build exercise rows from completed week (copy structure with clean sets)
+  // 5. Bestimme Target-RIR der nächsten Woche aus dem Meso-Kontext.
+  //    Ohne Meso oder ausserhalb → Default-RIR 2.
+  const nextWeekTargetRir = (() => {
+    if (!options?.mesocycle) return 2;
+    const info = getMesocycleWeekInfo(options.mesocycle, nextWeekStart);
+    return targetRirForWeek(info);
+  })();
+
+  // 6. Build exercise rows from completed week.
+  //    Wenn repRanges + mesocycle vorhanden: Engine schlägt Reps/Gewichte für nächste Woche vor.
+  //    Sonst: stumpfe Kopie der Vorwerte (Legacy-Verhalten).
+  const useEngine = !!options?.repRanges && !!options?.mesocycle;
   const exerciseRows: any[] = [];
   const nextDays: DayLog[] = [];
 
@@ -568,18 +590,27 @@ export async function completeWeekAndPrepareNext(
         // Skip duplicate exercise names within the same day
         if (seenExercises.has(ex.exercise)) return;
         seenExercises.add(ex.exercise);
-        const cleanSets = ex.sets.map((s) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
+
+        const nextSets = useEngine
+          ? suggestNextWeekSets(
+              ex.sets,
+              options!.repRanges![ex.exercise],
+              nextWeekTargetRir,
+              ex.exercise
+            )
+          : ex.sets.map((s) => ({ reps: s.reps || 0, kg: s.kg || 0 }));
+
         exerciseRows.push({
           week_id: nextWeekRow!.id,
           user_id: userId,
           day,
           exercise: ex.exercise,
-          sets: cleanSets,
+          sets: nextSets,
           sort_order: dayExercises.length,
           superset_with_next: ex.supersetWithNext || false,
           note: ex.note || null,
         });
-        dayExercises.push({ exercise: ex.exercise, sets: cleanSets, supersetWithNext: ex.supersetWithNext, note: ex.note });
+        dayExercises.push({ exercise: ex.exercise, sets: nextSets, supersetWithNext: ex.supersetWithNext, note: ex.note });
       });
     }
 

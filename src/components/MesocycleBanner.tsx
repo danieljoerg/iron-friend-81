@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Repeat, Plus, Trash2, ChevronRight } from "lucide-react";
+import { Repeat, Plus, Trash2, ChevronRight, Target } from "lucide-react";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
+import { targetRirForWeek } from "@/lib/progressionEngine";
 
 interface MesocycleBannerProps {
   mesocycle: Mesocycle | null;
@@ -184,6 +185,16 @@ export default function MesocycleBanner({ mesocycle, weekStart, onCreateMesocycl
           style={{ width: `${progressPercent}%` }}
         />
       </div>
+      {/* Target-RIR Indikator: zeigt das Ziel-RIR-Level der aktuellen Woche */}
+      {!info.isDeload && (
+        <div className="flex items-center gap-1.5 mt-2">
+          <Target className="w-3 h-3 text-primary/70" />
+          <span className="text-[10px] font-mono text-muted-foreground">
+            Ziel-RIR diese Woche: <span className="font-semibold text-foreground">{targetRirForWeek(info)}</span>
+            <span className="text-muted-foreground/60"> · {rirLabel(targetRirForWeek(info))}</span>
+          </span>
+        </div>
+      )}
       {info.isDeload && (
         <p className="text-[10px] font-mono text-yellow-600/80 mt-2">
           Gewicht auf ~55% reduzieren, gleiche Reps. Erholung steht im Fokus.
@@ -191,4 +202,11 @@ export default function MesocycleBanner({ mesocycle, weekStart, onCreateMesocycl
       )}
     </div>
   );
+}
+
+function rirLabel(rir: number): string {
+  if (rir >= 3) return "easy, Reserve aufbauen";
+  if (rir === 2) return "moderat anstrengend";
+  if (rir === 1) return "hart, knapp am Limit";
+  return "Peak — bis ans Limit";
 }

@@ -162,8 +162,12 @@ const Index = () => {
       return;
     }
 
-    // Normal flow: create next week with copied exercises
-    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id);
+    // Normal flow: create next week with auto-progressed sets
+    // Engine berechnet Reps/Gewichte basierend auf RIR & Target-RIR der nächsten Woche.
+    const nextWeek = await completeWeekAndPrepareNext(completedWeek, user.id, {
+      mesocycle,
+      repRanges,
+    });
 
     console.log("[handleCompleteWeek] Next week ready:", nextWeek.weekStart,
       "exercises:", nextWeek.days.map(d => `${d.day}:${d.exercises.length}`).join(", "));
