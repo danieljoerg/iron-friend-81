@@ -10,7 +10,10 @@
 // 3. Meso-Reset: 90% des Peaks bei neuem Meso (existing logic in getPeakWeekExercisesScaled).
 
 import type { WorkoutSet } from "./workoutData";
-import type { RepRange } from "./workoutDb";
+
+// Lokale Rep-Range-Definition, um circular import mit workoutDb zu vermeiden.
+// Strukturell kompatibel mit `RepRange` aus workoutDb.
+type RepRange = { exercise: string; min_reps: number; max_reps: number; youtube_url?: string };
 
 export const COMPOUND_INCREMENT_KG = 2.5;
 export const ISOLATION_INCREMENT_KG = 1;
