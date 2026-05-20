@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import type { Mesocycle } from "@/lib/workoutDb";
 import { getMesocycleWeekInfo } from "@/lib/workoutDb";
+import { targetRirForWeek } from "@/lib/progressionEngine";
 
 const SHORT_DAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const DAY_KEYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -192,6 +193,15 @@ export default function WeekSelector({ weekStart, onPrev, onNext, onToday, onDat
             <span className={`text-[10px] font-mono ${mesoInfo.isDeload ? "text-yellow-500 font-semibold" : "text-muted-foreground"}`}>
               {mesoInfo.isDeload ? "Deload" : `W${mesoInfo.weekNumber}/${mesoInfo.totalWeeks}`}
             </span>
+            {/* Target-RIR Indikator: ramps 3 → 0 across the meso */}
+            {!mesoInfo.isDeload && (
+              <span
+                className="text-[10px] font-mono text-primary/70 ml-0.5"
+                title="Ziel-RIR: wie viele Reps Reserve am Ende jedes Sets"
+              >
+                · RIR&nbsp;{targetRirForWeek(mesoInfo)}
+              </span>
+            )}
           </div>
           <button
             onClick={onDeleteMesocycle}
