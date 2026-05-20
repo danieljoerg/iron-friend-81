@@ -12,8 +12,7 @@ dist
 dist-ssr
 *.local
 
-# Local env files
-.env
+# Local env files (private secrets only — public VITE_ vars stay in tracked .env)
 .env.local
 .env.*.local
 
