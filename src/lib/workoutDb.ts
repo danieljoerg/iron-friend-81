@@ -441,6 +441,37 @@ async function _getOrCreateWeekDbImpl(weekStart: string, userId: string): Promis
   return { weekStart, days, trainingDays: weekTrainingDays };
 }
 
+/**
+ * Update ONLY the week-level metadata (days_done, training_days, readiness).
+ * Does NOT touch workout_exercises. Use this for toggles / readiness / done state.
+ */
+export async function saveWeekMetadataDb(week: WeekLog, userId: string): Promise<void> {
+  let { data: weekRow } = await supabase
+    .from("workout_weeks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("week_start", week.weekStart)
+    .maybeSingle();
+
+  if (!weekRow) {
+    const { data: newWeek } = await supabase
+      .from("workout_weeks")
+      .insert({ user_id: userId, week_start: week.weekStart })
+      .select("id")
+      .single();
+    weekRow = newWeek;
+  }
+  if (!weekRow) return;
+
+  const daysDone = week.days.filter((d) => d.done).map((d) => d.day);
+  const readinessMap: Record<string, number> = {};
+  week.days.forEach((d) => { if (d.readiness) readinessMap[d.day] = d.readiness; });
+  await supabase
+    .from("workout_weeks")
+    .update({ days_done: daysDone, training_days: week.trainingDays ?? null, readiness: readinessMap } as any)
+    .eq("id", weekRow.id);
+}
+
 export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
   // Get or create week record
   let { data: weekRow } = await supabase
@@ -461,27 +492,14 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
 
   if (!weekRow) return;
 
-  // Save days_done, training_days, and readiness status
-  const daysDone = week.days.filter((d) => d.done).map((d) => d.day);
-  const readinessMap: Record<string, number> = {};
-  week.days.forEach((d) => { if (d.readiness) readinessMap[d.day] = d.readiness; });
-  await supabase
-    .from("workout_weeks")
-    .update({ days_done: daysDone, training_days: week.trainingDays ?? null, readiness: readinessMap } as any)
-    .eq("id", weekRow.id);
+  // Always update metadata
+  await saveWeekMetadataDb(week, userId);
 
-  // Delete existing exercises for this week
-  await supabase
-    .from("workout_exercises")
-    .delete()
-    .eq("week_id", weekRow.id);
-
-  // Insert all exercises (deduplicate: one entry per day+exercise name)
+  // Build payload rows (deduplicate by day+exercise)
   const rows: any[] = [];
   week.days.forEach((day) => {
     const seenExercises = new Set<string>();
-    day.exercises.forEach((ex, idx) => {
-      // Skip duplicate exercise names within the same day
+    day.exercises.forEach((ex) => {
       if (seenExercises.has(ex.exercise)) return;
       seenExercises.add(ex.exercise);
       rows.push({
@@ -490,15 +508,79 @@ export async function saveWeekDb(week: WeekLog, userId: string): Promise<void> {
         day: day.day,
         exercise: ex.exercise,
         sets: ex.sets,
-        sort_order: rows.filter(r => r.day === day.day).length,
+        sort_order: rows.filter((r) => r.day === day.day).length,
         superset_with_next: ex.supersetWithNext || false,
         note: ex.note || null,
       });
     });
   });
 
-  if (rows.length > 0) {
-    await supabase.from("workout_exercises").insert(rows);
+  // SAFETY GUARD: never wipe a week with a fully empty payload.
+  // This protects against stale/partial in-memory state from another tab/device
+  // accidentally destroying logged workouts.
+  if (rows.length === 0) {
+    const { count } = await supabase
+      .from("workout_exercises")
+      .select("id", { count: "exact", head: true })
+      .eq("week_id", weekRow.id);
+    if ((count ?? 0) > 0) {
+      console.warn("[saveWeekDb] Refusing to wipe week", week.weekStart, "- payload empty but DB has", count, "exercises");
+      return;
+    }
+    return;
+  }
+
+  // DELTA SAVE: fetch existing rows and only touch what changed.
+  // Only delete rows for days that the caller actually included with data.
+  // This way a partial save (e.g. only Monday loaded) can't wipe other days.
+  const { data: existingRows } = await supabase
+    .from("workout_exercises")
+    .select("id, day, exercise")
+    .eq("week_id", weekRow.id);
+
+  const daysInPayload = new Set(
+    week.days.filter((d) => d.exercises.length > 0).map((d) => d.day)
+  );
+  const payloadKeys = new Set(rows.map((r) => `${r.day}:${r.exercise}`));
+
+  // Delete only existing rows that belong to a day present in the payload
+  // AND are no longer in the payload (renamed/removed exercises).
+  const toDelete = (existingRows || [])
+    .filter((r: any) => daysInPayload.has(r.day) && !payloadKeys.has(`${r.day}:${r.exercise}`))
+    .map((r: any) => r.id);
+
+  if (toDelete.length > 0) {
+    await supabase.from("workout_exercises").delete().in("id", toDelete);
+  }
+
+  // Upsert all payload rows by (week_id, day, exercise).
+  // Existing matching rows are updated in place; new ones are inserted.
+  // Note: this relies on an application-level dedup (we already deduped above).
+  const existingByKey = new Map<string, string>();
+  (existingRows || []).forEach((r: any) => existingByKey.set(`${r.day}:${r.exercise}`, r.id));
+
+  const toUpdate = rows
+    .filter((r) => existingByKey.has(`${r.day}:${r.exercise}`))
+    .map((r) => ({ id: existingByKey.get(`${r.day}:${r.exercise}`)!, ...r }));
+  const toInsert = rows.filter((r) => !existingByKey.has(`${r.day}:${r.exercise}`));
+
+  // Updates: do them in parallel per row (small N, fine).
+  await Promise.all(
+    toUpdate.map((r) =>
+      supabase
+        .from("workout_exercises")
+        .update({
+          sets: r.sets,
+          sort_order: r.sort_order,
+          superset_with_next: r.superset_with_next,
+          note: r.note,
+        } as any)
+        .eq("id", r.id)
+    )
+  );
+
+  if (toInsert.length > 0) {
+    await supabase.from("workout_exercises").insert(toInsert);
   }
 }
 
