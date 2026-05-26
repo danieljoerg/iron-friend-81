@@ -274,14 +274,14 @@ const Index = () => {
     setWeekTrainingDays(updated);
     const updatedWeek = { ...week, trainingDays: updated };
     setWeek(updatedWeek);
-    if (user) saveWeekDb(updatedWeek, user.id);
+    if (user) saveWeekMetadataDb(updatedWeek, user.id);
   };
 
   const handleResetWeekDays = () => {
     setWeekTrainingDays(null);
     const updatedWeek = { ...week, trainingDays: null };
     setWeek(updatedWeek);
-    if (user) saveWeekDb(updatedWeek, user.id);
+    if (user) saveWeekMetadataDb(updatedWeek, user.id);
   };
 
   const handleDayChange = useCallback(
